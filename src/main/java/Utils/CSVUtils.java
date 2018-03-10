@@ -18,34 +18,10 @@ Reference: https://www.mkyong.com/java/how-to-read-and-parse-csv-file-in-java/
 */
 
 public class CSVUtils {
-    private static String INDEX_DIRECTORY = "src/main/resources/";
-    private static String csvFile = "politicians.csv";
-    private static String sep = ";";
-    
-    public static void setDirectory(String directory) {
-        INDEX_DIRECTORY = directory;
-    }
-        
-    public static void setFilename(String filename){
-        csvFile = filename;
-    }
+    public static String INDEX_DIRECTORY = "src/main/resources/";
+    public static String csvFile = "politicians.csv";
+    public static String sep = ";";
 
-    public static void setSeparator(String separator){
-        sep = separator;
-    }
-    
-    public static String getDirectory(){
-        return INDEX_DIRECTORY;
-    }
-    
-    public static String Filename(){
-        return csvFile;
-    }
-    
-    public static String getSeparator(){
-        return sep;
-    }
-    
     public static List<String[]> readCSV(){
         String line;
         List<String[]> politicians = new ArrayList<>();
