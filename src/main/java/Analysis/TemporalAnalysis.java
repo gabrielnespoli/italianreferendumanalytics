@@ -8,16 +8,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.seninp.jmotif.sax.SAXException;
-import net.seninp.jmotif.sax.SAXProcessor;
 import org.apache.lucene.analysis.it.ItalianAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -37,7 +35,7 @@ import org.apache.lucene.util.Version;
 import twitter4j.JSONException;
 import twitter4j.JSONObject;
 import net.seninp.jmotif.sax.alphabet.NormalAlphabet;
-import net.seninp.jmotif.sax.datastructure.SAXRecords;
+import org.apache.commons.text.similarity.HammingDistance;
 
 public class TemporalAnalysis {
     public static String streamFilesLocation = "src/main/resources/sbn-data/stream/";
@@ -199,7 +197,6 @@ public class TemporalAnalysis {
             setTerms.add(term.termtext.utf8ToString());
         return setTerms;
     }
-
     
     
     /* 
@@ -243,16 +240,6 @@ public class TemporalAnalysis {
         return vectorOfTermsFrequencies;
     }
     
-    // from a timeseries of the word frequencies, create a SAX string that represents it
-    private static String buildSAX(double[] timeSeries) throws SAXException{
-        int alphabetSize = 20;
-        double nThreshold = 0.01;
-        NormalAlphabet na = new NormalAlphabet();
-        SAXProcessor sp = new SAXProcessor();
-        SAXRecords res = sp.ts2saxByChunking(timeSeries, timeSeries.length, na.getCuts(alphabetSize), nThreshold);
-        return res.getSAXString("");
-    }
-    
     // create a SAX string for each term in the hashmap
     private static HashMap<String, String> fromFreqVectorsToSAXStrings(HashMap<String, double[]> vectorOfFrequencies) throws SAXException {
         HashMap<String, String> hmTermSAX = new HashMap<>();
@@ -260,7 +247,8 @@ public class TemporalAnalysis {
         vectorOfFrequencies.keySet().forEach((term) -> {
             String sax;
             try {
-                sax = buildSAX(vectorOfFrequencies.get(term));
+                SAXBuilder saxUtils = new SAXBuilder(20, 0.01, new NormalAlphabet());
+                sax = saxUtils.buildSAX(vectorOfFrequencies.get(term));
                 hmTermSAX.put(term, sax);
             } catch (SAXException ex) {
                 System.out.println(ex.getMessage());
@@ -269,6 +257,11 @@ public class TemporalAnalysis {
         return hmTermSAX;
     }
     
+    /*
+    useCache define if the program has to process the entire twitter DB. N is the number of the top terms to
+    be considered in the analysis. timeInterval is the granularity of the temporal analysis used to create
+    the vector of frequencies of the top N terms
+    */
     public static void doTemporalAnalysis(boolean useCache, int N, int timeInterval) throws IOException, Exception{
         if(!useCache)
             createIndex();
@@ -291,6 +284,11 @@ public class TemporalAnalysis {
         //for each term create a SAX that represents the frequencies vector
         HashMap<String, String> hmYesTermSAX = fromFreqVectorsToSAXStrings(hmYesTermFreqVector);
         HashMap<String, String> hmNoTermSAX = fromFreqVectorsToSAXStrings(hmNoTermFreqVector);
+        
+        HammingDistance hd = new HammingDistance();
+        KMeans kmeans = new KMeans(hd);
+        ArrayList<LinkedHashSet<String>> yesClusters = kmeans.getClusterOfTerms(7, hmYesTermSAX);
+        ArrayList<LinkedHashSet<String>> noClusters = kmeans.getClusterOfTerms(7, hmNoTermSAX);
         
     }
 
