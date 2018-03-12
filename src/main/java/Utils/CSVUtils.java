@@ -15,17 +15,17 @@ import java.util.List;
 
 /*
 Reference: https://www.mkyong.com/java/how-to-read-and-parse-csv-file-in-java/
-*/
-
+ */
 public class CSVUtils {
+
     public static String INDEX_DIRECTORY = "src/main/resources/";
     public static String csvFile = "politicians.csv";
     public static String sep = ";";
 
-    public static List<String[]> readCSV(){
+    public static List<String[]> readCSV() {
         String line;
         List<String[]> politicians = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(INDEX_DIRECTORY+csvFile))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(INDEX_DIRECTORY + csvFile))) {
             while ((line = br.readLine()) != null) {
                 politicians.add(line.split(sep));
             }
@@ -34,12 +34,12 @@ public class CSVUtils {
         }
         return politicians;
     }
-    
-    public static void writeCSV(List<String[]> politicians) throws IOException{
-        PrintWriter pw = new PrintWriter(new FileWriter(INDEX_DIRECTORY+"politicians_loaded.csv"));
+
+    public static void writeCSV(List<String[]> politicians) throws IOException {
+        PrintWriter pw = new PrintWriter(new FileWriter(INDEX_DIRECTORY + "politicians_loaded.csv"));
         politicians.forEach((politicianLine) -> {
             pw.write(politicianLine[0] + ";");
-            if(politicianLine.length > 1) {
+            if (politicianLine.length > 1) {
                 pw.write(politicianLine[1]);
             }
             pw.write("\n");

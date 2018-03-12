@@ -21,9 +21,10 @@ import twitter4j.User;
 import twitter4j.conf.ConfigurationBuilder;
 
 public class FindPoliticians {
+
     private static final int FOLLOWERSTHRESHOLD = 5000;
-    
-    private static Twitter getTwitter(){
+
+    private static Twitter getTwitter() {
         ConfigurationBuilder cfg = new ConfigurationBuilder();
         cfg.setOAuthAccessToken("804265252221308928-QMQRe5XZPRSBmXqZTYD1ESzOoiNDY7y");
         cfg.setOAuthAccessTokenSecret("ykK4tbpXus9Yggh41ChMnbct4mHjbc0gDxEcyOYerX9SD");
@@ -33,70 +34,69 @@ public class FindPoliticians {
         return tf.getInstance();
     }
 
-    private static QueryResult findTweetsAboutReferendum(Twitter twitter) throws TwitterException{
+    private static QueryResult findTweetsAboutReferendum(Twitter twitter) throws TwitterException {
         Query query = new Query("#referendum");
         query.setSince("2016-09-01");
         query.setUntil("2016-12-05");
-        
+
         QueryResult result = twitter.search(query);
-        if(result.getTweets() == null || result.getTweets().isEmpty()){
+        if (result.getTweets() == null || result.getTweets().isEmpty()) {
             return null;
         }
         return result;
     }
-    
-    private static String fromNameToTwitterID(String name) throws InterruptedException{
+
+    private static String fromNameToTwitterID(String name) throws InterruptedException {
         Twitter twitter = getTwitter();
         boolean done = true;
         do {
             try {
                 User user = twitter.searchUsers(name, 0).get(0);
-                if(user.getFollowersCount() >= FOLLOWERSTHRESHOLD){
+                if (user.getFollowersCount() >= FOLLOWERSTHRESHOLD) {
                     name = "@" + user.getScreenName();
-                }
-                else{
+                } else {
                     name = "";
                 }
             } catch (TwitterException ex) {
                 Logger.getLogger(FindPoliticians.class.getName()).log(Level.SEVERE, null, ex);
-                 TimeUnit.MINUTES.sleep(3);
-                 done = false;
-            } catch(java.lang.IndexOutOfBoundsException e) {
+                TimeUnit.MINUTES.sleep(3);
+                done = false;
+            } catch (java.lang.IndexOutOfBoundsException e) {
                 name = "";
             }
-        } while(!done);
+        } while (!done);
         return name;
     }
-    
-    private static List<String[]> fromMatrixNameToMatrixTwitterID(List<String[]> politiciansMatrix){
+
+    private static List<String[]> fromMatrixNameToMatrixTwitterID(List<String[]> politiciansMatrix) {
         politiciansMatrix.forEach((politiciansLine) -> {
             //jump the header
-            if(politiciansLine != politiciansMatrix.get(0)) {
+            if (politiciansLine != politiciansMatrix.get(0)) {
                 String politicianYes = politiciansLine[0];
                 String politicianNo = "";
-                
-                if(politiciansLine.length > 1){
+
+                if (politiciansLine.length > 1) {
                     politicianNo = politiciansLine[1];
                 }
-                
+
                 try {
-                    if(!politicianYes.startsWith("@")) {
+                    if (!politicianYes.startsWith("@")) {
                         politicianYes = fromNameToTwitterID(politicianYes);
                         politiciansLine[0] = politicianYes;
                     }
-                    if(!politicianNo.startsWith("@") && !"".equals(politicianNo)) {
+                    if (!politicianNo.startsWith("@") && !"".equals(politicianNo)) {
                         politicianNo = fromNameToTwitterID(politicianNo);
                         politiciansLine[1] = politicianNo;
                     }
-                } catch(InterruptedException ie) {
+                } catch (InterruptedException ie) {
                     System.out.println(ie.getMessage());
                 }
             }
         });
         return politiciansMatrix;
     }
-    
-    public static void main(String []args) throws TwitterException, FileNotFoundException, IOException{
+
+    public static void main(String[] args) throws TwitterException, FileNotFoundException, IOException {
         List<String[]> politicians = CSVUtils.readCSV();
         politicians = fromMatrixNameToMatrixTwitterID(politicians);
         CSVUtils.writeCSV(politicians);

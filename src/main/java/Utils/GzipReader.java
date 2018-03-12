@@ -13,11 +13,9 @@ import java.io.Reader;
 import java.util.zip.GZIPInputStream;
 import java.nio.charset.StandardCharsets;
 
-        
-public class GzipReader
-{
-    public static BufferedReader getBufferedReaderGzFile(String filename) throws IOException
-    {
+public class GzipReader {
+
+    public static BufferedReader getBufferedReaderGzFile(String filename) throws IOException {
         // open the input (compressed) file.
         FileInputStream stream = new FileInputStream(filename);
 

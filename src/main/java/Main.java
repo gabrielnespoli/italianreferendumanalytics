@@ -6,7 +6,7 @@ import twitter4j.JSONException;
 public class Main {
     public static void main(String []args) throws IOException, JSONException, ParseException, Exception {
         
-        TemporalAnalysis.doTemporalAnalysis(true, 1000, 12);
+        TemporalAnalysis.clusterTopNTerms(true, 1000, 12);
         String filename = "";
         
     }
