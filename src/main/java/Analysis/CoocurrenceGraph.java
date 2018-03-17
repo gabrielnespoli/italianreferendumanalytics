@@ -10,11 +10,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.misc.HighFreqTerms;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
@@ -30,13 +32,32 @@ import static org.apache.lucene.util.Version.LUCENE_41;
  */
 public class CoocurrenceGraph {
 
+    public static void Write(List<String> s1, List<String> s2, List<Integer> w, String fn) {
+
+        try {
+            FileWriter fr = new FileWriter(fn);
+            BufferedWriter br = new BufferedWriter(fr);
+            PrintWriter out = new PrintWriter(br);
+            for (int i = 0; i < s1.size(); i++) {
+                if (s1.get(i) != null) {
+                    out.write(s1.get(i) + " " + s2.get(i) + " " + w.get(i));
+                }
+                out.write("\n");
+            }
+            out.close();
+
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
+
     public static int countCoocurrence(String term1, String term2, IndexReader ir) throws IOException, ParseException {
         // Given 2 terms and an index, calculates how many documents contains both words
         IndexSearcher searcher = new IndexSearcher(ir);
         Analyzer analyzer = new StandardAnalyzer(LUCENE_41);
         QueryParser parser = new QueryParser(LUCENE_41, "term", analyzer);
         String sq = "+" + term1 + " +" + term2;
-        System.out.println(sq);
+        //System.out.println(sq);
         Query q = parser.parse(sq);
         //Query q;
         //q = new TermQuery( new Term("term","casa"));
@@ -46,61 +67,61 @@ public class CoocurrenceGraph {
         return hits.length;
     }
 
-    public static void main(String[] args) throws IOException, ParseException, Exception {
-        String clusterYes = "src/main/resources/clusterYes.csv";
-        String clusterNo = "src/main/resources/clusterNo.csv";
+    public static void generateGraph(String cluster, String indexFolder, String outputFile) throws IOException, ParseException, Exception {
 
+        File directoryIndex = new File(indexFolder);
+        IndexReader ir = DirectoryReader.open(FSDirectory.open(directoryIndex));
+        
         // Save here the graph
         List<String> col1 = new ArrayList<>();
         List<String> col2 = new ArrayList<>();
         List<Integer> weight = new ArrayList<>();
 
+        ReadFile rf = new ReadFile();
+
+        String[] lines = rf.readLines(cluster);
+/*
+        for (String line : lines) {
+            String[] parts = line.split(" ");
+            System.out.println(line);
+        }*/
+
+        for (int i = 0; i < lines.length; i++) {
+            System.out.println((float) i/lines.length*100 + "%");
+            String[] partsi = lines[i].split(" ");
+            int resulti = Integer.parseInt(partsi[1]);
+            for (int j = 0; j < lines.length; j++) {
+                String[] partsj = lines[j].split(" ");
+                int resultj = Integer.parseInt(partsj[1]);
+                if (resultj > resulti) {
+                    int count = countCoocurrence(partsi[0], partsj[0], ir);
+                    if (count > 0) {
+                        col1.add(partsi[0]);
+                        col2.add(partsj[0]);
+                        weight.add(count);
+                    }
+
+                }
+            }
+        }
+
+        Write(col1, col2, weight, outputFile);
+        System.out.println("Done");
+
+    }
+
+    public static void main(String[] args) throws IOException, ParseException, Exception {
+        String clusterYes = "src/main/resources/yesClusters.txt";
+        String clusterNo = "src/main/resources/noClusters.txt";
+
         // Load the index
         // Yes tweets
         String indexFolderYes = "src/main/resources/yes_index/";
-        File directoryIndexYes = new File(indexFolderYes);
-        IndexReader irYes = DirectoryReader.open(FSDirectory.open(directoryIndexYes));
-
         // No tweets
         String indexFolderNo = "src/main/resources/no_index/";
-        File directoryIndexNo = new File(indexFolderNo);
-        IndexReader irNo = DirectoryReader.open(FSDirectory.open(directoryIndexNo));
 
-        // Test with some terms and 2 clusters
-        String term1 = "matteorenz";
-        String term7 = "solo";
-        String term2 = "italian";
-        String term6 = "https";
-        String term3 = "Renzi";
-        String term4 = "casa";
-        List<String> cluster1 = Arrays.asList(term1, term2, term3);
-        List<String> cluster2 = Arrays.asList(term4, term6, term7);
-
-        // test 
-        //System.out.println(HighFreqTerms.getHighFreqTerms(irYes, 1000, "term")[11]);
-        List<List<String>> listOfClusters = new ArrayList<>();
-        listOfClusters.add(cluster1);
-        listOfClusters.add(cluster2);
-        
-        // Get into cluster1
-        for (int i = 0; i < listOfClusters.size(); i++) {
-        // Get into cluster 2
-            for (int j = 0; j < listOfClusters.size(); j++) {
-                if (j > i) {
-                    // Iterate among the touples of words of both clusters
-                    for (String element1 : listOfClusters.get(i)) {
-                        for (String element2 : listOfClusters.get(j)) {
-                            int count = countCoocurrence(element1, element2, irYes);
-                            System.out.println(count);
-                            col1.add(element1);
-                            col2.add(element2);
-                            weight.add(count);
-                        }
-                    }
-                }
-
-            }
-        }
+        generateGraph(clusterYes, indexFolderYes, "src/main/resources/yes_graph.txt");
+        generateGraph(clusterNo, indexFolderNo, "src/main/resources/no_graph.txt");
 
     }
 
