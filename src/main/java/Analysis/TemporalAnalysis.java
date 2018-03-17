@@ -11,12 +11,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.TreeSet;
 import net.seninp.jmotif.sax.SAXException;
 import org.apache.lucene.analysis.it.ItalianAnalyzer;
 import org.apache.lucene.document.Document;
@@ -249,14 +251,32 @@ public class TemporalAnalysis {
     }
 
     // create a SAX string for each term in the hashmap
-    private static HashMap<String, String> fromFreqVectorsToSAXStrings(HashMap<String, double[]> vectorOfFrequencies) throws SAXException {
+    private static HashMap<String, String> fromFreqVectorsToSAXStrings(HashMap<String, double[]> hmTermFrequencies, int alphabetSize) throws SAXException {
         HashMap<String, String> hmTermSAX = new HashMap<>();
 
-        vectorOfFrequencies.keySet().forEach((term) -> {
+        // normalize the vector of frequencies, in this way there will be a better comparison
+        // between 2 different SAX strings
+        TreeSet allFrequencies = new TreeSet();
+        hmTermFrequencies.values().forEach((double[] frequencies) -> {
+            for (int i = 0; i < frequencies.length; i++) {
+                allFrequencies.add(frequencies[i]);
+            }
+        });
+
+        double maxFreq = (double) allFrequencies.last();
+
+        // divide all elements by the maxFreq, normalizing, then, between 0 and 1
+        hmTermFrequencies.values().forEach((double[] frequencies) -> {
+            for (int i = 0; i < frequencies.length; i++) {
+                frequencies[i] = frequencies[i] / maxFreq;
+            }
+        });
+
+        hmTermFrequencies.keySet().forEach((term) -> {
             String sax;
             try {
-                SAXBuilder saxUtils = new SAXBuilder(20, 0.01, new NormalAlphabet());
-                sax = saxUtils.buildSAX(vectorOfFrequencies.get(term));
+                SAXBuilder saxUtils = new SAXBuilder(alphabetSize, Math.round(alphabetSize / maxFreq ), new NormalAlphabet());
+                sax = saxUtils.buildSAX(hmTermFrequencies.get(term));
                 hmTermSAX.put(term, sax);
             } catch (SAXException ex) {
                 System.out.println(ex.getMessage());
@@ -265,14 +285,13 @@ public class TemporalAnalysis {
         return hmTermSAX;
     }
 
-    private static void saveClusterOnHardDisk(ArrayList<LinkedHashSet<String>> clusters, String destFolder) throws IOException {
+    private static void saveClusterOnHardDisk(HashMap<String, Integer> clusters, String destFolder) throws IOException {
         PrintWriter pw = new PrintWriter(new FileWriter(destFolder));
 
-        for (int i = 0; i < clusters.size(); i++) {
-            for (String term : clusters.get(i)) {
-                pw.println(term + " " + i);
-            }
-        }
+        clusters.keySet().forEach((saxString) -> {
+            pw.println(saxString + " " + clusters.get(saxString));
+        });
+        
         pw.close();
     }
 
@@ -287,7 +306,7 @@ public class TemporalAnalysis {
     <term1> <cluster_id>
     <term2> <cluster_id>...
      */
-    public static void clusterTopNTerms(boolean useCache, int N, int timeInterval) throws IOException, Exception {
+    public static void clusterTopNTerms(boolean useCache, int N, int timeInterval, int k) throws IOException, Exception {
         if (!useCache) {
             createIndex();
         }
@@ -308,13 +327,15 @@ public class TemporalAnalysis {
         HashMap<String, double[]> hmNoTermFreqVector = createVectorsOfFrequencies(INDEX_DIRECTORY + "no_index", noNTopTerms, max, min, interval);
 
         //for each term create a SAX that represents the frequencies vector
-        HashMap<String, String> hmYesTermSAX = fromFreqVectorsToSAXStrings(hmYesTermFreqVector);
-        HashMap<String, String> hmNoTermSAX = fromFreqVectorsToSAXStrings(hmNoTermFreqVector);
+        int alphabetSize = 20;
+        HashMap<String, String> hmYesTermSAX = fromFreqVectorsToSAXStrings(hmYesTermFreqVector, alphabetSize);
+        HashMap<String, String> hmNoTermSAX = fromFreqVectorsToSAXStrings(hmNoTermFreqVector, alphabetSize);
 
-        HammingDistance hd = new HammingDistance();
-        KMeans kmeans = new KMeans(hd);
-        ArrayList<LinkedHashSet<String>> yesClusters = kmeans.getClusterOfTerms(7, hmYesTermSAX);
-        ArrayList<LinkedHashSet<String>> noClusters = kmeans.getClusterOfTerms(7, hmNoTermSAX);
+        KMeans yesKMeans = new KMeans(k, alphabetSize, new ArrayList<>(hmYesTermSAX.values()));
+        HashMap<String, Integer> yesClusters = yesKMeans.getClusters();
+        
+        KMeans noKMeans = new KMeans(k, alphabetSize, new ArrayList<>(hmNoTermSAX.values()));
+        HashMap<String, Integer> noClusters = noKMeans.getClusters();
 
         saveClusterOnHardDisk(yesClusters, resourcesLocation + "yesClusters.txt");
         saveClusterOnHardDisk(noClusters, resourcesLocation + "noClusters.txt");
