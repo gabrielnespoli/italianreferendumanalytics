@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.AtomicDouble;
 import it.stilo.g.algo.ConnectedComponents;
 import it.stilo.g.algo.CoreDecomposition;
 import it.stilo.g.algo.GraphInfo;
+import it.stilo.g.algo.SubGraphByEdgesWeight;
 import it.stilo.g.structures.Core;
 import it.stilo.g.structures.WeightedDirectedGraph;
 import it.stilo.g.util.NodesMapper;
@@ -28,7 +29,7 @@ public class Kcore {
         int worker = (int) (Runtime.getRuntime().availableProcessors());
         
         // minimum value of the weight of an edge to keep the edge
-        double t = 0.001;
+        double t = 0.00175;
 
         // load the graph from what we did in CoocurrenceGraph (counts the number of
         // times that 2 words appear in the same document
@@ -82,13 +83,18 @@ public class Kcore {
             
             // make the threshole: if the weight is less than t,
             // put it as 0 because I dont see a method for removing the edge
-            for (int j = 0; j < g.weights[i].length; j++) {
+            /*for (int j = 0; j < g.weights[i].length; j++) {
                 if (g.weights[i][j] < t) {
                     //g.weights[i][j] = (double) 0;
                     g.update(i, j, (double) 0);
                 }
-            }
+            }*/
         }
+        
+        // Create a subgraph from the edges that have at least weight t
+        g = SubGraphByEdgesWeight.extract(g, t, 8);
+        
+        
         
         // Show the weights as list of lists:
         // [[weight of node1 to node1, [weight of node1 to node2, [weight of node1 to node3, ...], [weight of node2 to node1, [weight of node2 to node2, [weight of node2 to node3, ...]]
