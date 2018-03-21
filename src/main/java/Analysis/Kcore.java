@@ -10,7 +10,7 @@ import it.stilo.g.algo.ConnectedComponents;
 import it.stilo.g.algo.CoreDecomposition;
 import it.stilo.g.algo.GraphInfo;
 import it.stilo.g.structures.Core;
-import it.stilo.g.structures.WeightedUndirectedGraph;
+import it.stilo.g.structures.WeightedDirectedGraph;
 import it.stilo.g.util.NodesMapper;
 import java.io.IOException;
 import java.util.Arrays;
@@ -26,25 +26,38 @@ public class Kcore {
 
     public static void main(String[] args) throws IOException, ParseException, Exception {
         int worker = (int) (Runtime.getRuntime().availableProcessors());
-        double t = 0.01;
+        
+        // minimum value of the weight of an edge to keep the edge
+        double t = 0.001;
 
+        // load the graph from what we did in CoocurrenceGraph (counts the number of
+        // times that 2 words appear in the same document
         String graph = "src/main/resources/yes_graph.txt";
         ReadFile rf = new ReadFile();
         String[] lines = rf.readLines(graph);
+        
+        // map the words into id for g stilo
         NodesMapper<String> mapper = new NodesMapper<String>();
-        System.out.println(lines.length);
+        System.out.println("The number lines of the file is " + lines.length);
+        
+        // creathe the graph
+        // keep in mind that the id of a word is mapper.getId(s1) - 1 (important the -1)
         int n = lines.length;
-
-        WeightedUndirectedGraph g = new WeightedUndirectedGraph(n + 1);
-
+        WeightedDirectedGraph g = new WeightedDirectedGraph(n + 1);
         for (int i = 0; i < n; i++) {
+            // split the line in 3 parts: node1, node2, and weight
             String[] line = lines[i].split(" ");
-            String s1 = line[0];
-            String s2 = line[1];
+            String node1 = line[0];
+            String node2 = line[1];
             Double w = Double.parseDouble(line[2]);
-            g.add(mapper.getId(s1) - 1, mapper.getId(s2) - 1, w);
+            // the graph is directed, add links in both ways
+            g.add(mapper.getId(node1) - 1, mapper.getId(node2) - 1, w);
+            g.add(mapper.getId(node2) - 1, mapper.getId(node1) - 1, w);
         }
-        System.out.println("Info about the graph");
+        
+        // get info about the graph using the stilo library
+        System.out.println();
+        System.out.println("Info about the graph:");
         AtomicDouble[] info = GraphInfo.getGraphInfo(g, worker);
         System.out.println("Nodes:" + info[0]);
         System.out.println("Edges:" + info[1]);
@@ -52,44 +65,55 @@ public class Kcore {
         
 
         // Normalize the weights
-        
-        
-        
         double suma = 0;
+        // go in each node
         for (int i = 0; i < info[0].intValue(); i++) {
             suma = 0;
+            // calculate the sum of the weights of this node with the neighbours
             for (int j = 0; j < g.weights[i].length; j++) {
                 suma = suma + g.weights[i][j];
             }
             
+            // update the weights by dividing by the total weight sum
             for (int j = 0; j < g.weights[i].length; j++) {
-                g.weights[i][j] = g.weights[i][j] / suma;
+                //g.weights[i][j] = g.weights[i][j] / suma;
+                g.update(i, j,g.weights[i][j] / suma);
             }
-            // make the threshole
             
+            // make the threshole: if the weight is less than t,
+            // put it as 0 because I dont see a method for removing the edge
             for (int j = 0; j < g.weights[i].length; j++) {
                 if (g.weights[i][j] < t) {
-                    g.weights[i][j] = (double) 0;
+                    //g.weights[i][j] = (double) 0;
+                    g.update(i, j, (double) 0);
                 }
-
             }
-
         }
         
+        // Show the weights as list of lists:
+        // [[weight of node1 to node1, [weight of node1 to node2, [weight of node1 to node3, ...], [weight of node2 to node1, [weight of node2 to node2, [weight of node2 to node3, ...]]
+        System.out.println();
         System.out.println(Arrays.deepToString(g.weights));
+        
+        // get the list of all nodes for the rootedConnectedComponents method (to indentify conected components)
+        // example here https://github.com/giovanni-stilo/G/blob/master/src/main/java/it/stilo/g/example/CCExample.java
         int[] all = new int[g.size];
         for (int i = 0; i < g.size; i++) {
             all[i] = i;
         }
         Set<Set<Integer>> comps = ConnectedComponents.rootedConnectedComponents(g, all, worker);
-        System.out.println("Components");
+        System.out.println();
+        System.out.println("--- Number of Connected Components");
         System.out.println(comps.size());
 
-        //List<Core> c = CoreDecomposition.topsInnerMost(g, worker);
-        System.out.println("Decomposition");
+        //Run the K-core
+        // example here https://github.com/giovanni-stilo/G/blob/master/src/main/java/it/stilo/g/example/CorenessExample.java
+        // and method getInnerMostCore here https://github.com/giovanni-stilo/G/blob/master/src/main/java/it/stilo/g/algo/CoreDecomposition.java
+        System.out.println();
+        System.out.println("--- Top inner most core");
 
         Core cc = CoreDecomposition.getInnerMostCore(g, worker);
-        System.out.println(cc.minDegree);
-        System.out.println(cc.seq.length);
+        System.out.println("Minimum degree: " + cc.minDegree);
+        System.out.println("Vertices: " + cc.seq.length);
     }
 }
