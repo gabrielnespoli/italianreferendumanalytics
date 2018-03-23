@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import it.stilo.g.algo.SubGraph;
+import it.stilo.g.structures.WeightedUndirectedGraph;
 import java.util.Iterator;
 import java.util.Set;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -31,7 +32,7 @@ public class Kcore {
         int worker = (int) (Runtime.getRuntime().availableProcessors());
 
         // minimum value of the weight of an edge to keep the edge
-        double t = 0.01;
+        double t = 0.195;
 
         // load the graph from what we did in CoocurrenceGraph (counts the number of
         // times that 2 words appear in the same document
@@ -46,7 +47,7 @@ public class Kcore {
         // creathe the graph
         // keep in mind that the id of a word is mapper.getId(s1) - 1 (important the -1)
         int n = lines.length;
-        WeightedDirectedGraph g = new WeightedDirectedGraph(1000 + 1);
+        WeightedUndirectedGraph g = new WeightedUndirectedGraph(1000 + 1);
         for (int i = 0; i < n; i++) {
             // split the line in 3 parts: node1, node2, and weight
             String[] line = lines[i].split(" ");
@@ -55,18 +56,19 @@ public class Kcore {
             Double w = Double.parseDouble(line[2]);
             // the graph is directed, add links in both ways
             g.add(mapper.getId(node1) - 1, mapper.getId(node2) - 1, w);
-            g.add(mapper.getId(node2) - 1, mapper.getId(node1) - 1, w);
+            //g.add(mapper.getId(node2) - 1, mapper.getId(node1) - 1, w);
         }
 
         // get info about the graph using the stilo library
         System.out.println();
-        System.out.println("Info about the graph:");
+        System.out.println("Info about the graph before making subgraph:");
         AtomicDouble[] info = GraphInfo.getGraphInfo(g, worker);
         System.out.println("Nodes:" + info[0]);
         System.out.println("Edges:" + info[1]);
         System.out.println("Density:" + info[2]);
 
         // Normalize the weights
+        
         double suma = 0;
         // go in each node
         for (int i = 0; i < info[0].intValue(); i++) {
@@ -91,12 +93,13 @@ public class Kcore {
                 }
             }*/
         }
+           
 
         // Create a subgraph from the edges that have at least weight t
         g = SubGraphByEdgesWeight.extract(g, t, 8);
 
         System.out.println();
-        System.out.println("Info about the graph:");
+        System.out.println("Info about the subgraph:");
         AtomicDouble[] info2 = GraphInfo.getGraphInfo(g, worker);
         System.out.println("Nodes:" + info2[0]);
         System.out.println("Edges:" + info2[1]);
@@ -105,6 +108,7 @@ public class Kcore {
         // Show the weights as list of lists:
         // [[weight of node1 to node1, weight of node1 to node2, weight of node1 to node3, ...], [weight of node2 to node1, [weight of node2 to node2, [weight of node2 to node3, ...]]
         System.out.println();
+        System.out.println("The weights of the subgraph");
         System.out.println(Arrays.deepToString(g.weights));
 
         // get the list of all nodes for the rootedConnectedComponents method (to indentify conected components)
@@ -133,10 +137,10 @@ public class Kcore {
             int[] subnodes = new int[innerSet.size()];
             Iterator<Integer> iterator = innerSet.iterator();
             for (int j = 0; j < subnodes.length; j++) {
-                subnodes[j] = iterator.next().intValue();
+                subnodes[j] = iterator.next();
             }
 
-            WeightedDirectedGraph s = SubGraph.extract(g, subnodes, worker);
+            WeightedUndirectedGraph s = SubGraph.extract(g, subnodes, worker);
             Core cc = CoreDecomposition.getInnerMostCore(s, worker);
             System.out.println();
             System.out.println(innerSet);
