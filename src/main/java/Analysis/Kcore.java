@@ -32,7 +32,7 @@ public class Kcore {
         int worker = (int) (Runtime.getRuntime().availableProcessors());
 
         // minimum value of the weight of an edge to keep the edge
-        double t = 0.195;
+        double t = 0.2;
 
         // load the graph from what we did in CoocurrenceGraph (counts the number of
         // times that 2 words appear in the same document
@@ -68,7 +68,6 @@ public class Kcore {
         System.out.println("Density:" + info[2]);
 
         // Normalize the weights
-        
         double suma = 0;
         // go in each node
         for (int i = 0; i < info[0].intValue(); i++) {
@@ -93,7 +92,6 @@ public class Kcore {
                 }
             }*/
         }
-           
 
         // Create a subgraph from the edges that have at least weight t
         g = SubGraphByEdgesWeight.extract(g, t, 8);
@@ -129,10 +127,8 @@ public class Kcore {
         System.out.println("--- Top inner most core");
 
         // iterate on each CC
-  
-        
         for (Set<Integer> innerSet : comps) {
-            
+
             // the method SubGraph.extract needs primitive int[], so convert from set
             int[] subnodes = new int[innerSet.size()];
             Iterator<Integer> iterator = innerSet.iterator();
@@ -141,11 +137,21 @@ public class Kcore {
             }
 
             WeightedUndirectedGraph s = SubGraph.extract(g, subnodes, worker);
+
+            AtomicDouble[] info3 = GraphInfo.getGraphInfo(s, worker);
+            System.out.println();
+            System.out.println("Conected component");
+            System.out.println("Nodes:" + info3[0]);
+            System.out.println("Edges:" + info3[1]);
+            System.out.println("Density:" + info3[2]);
+
             Core cc = CoreDecomposition.getInnerMostCore(s, worker);
             System.out.println();
             System.out.println(innerSet);
             System.out.println("Minimum degree: " + cc.minDegree);
             System.out.println("Vertices: " + cc.seq.length);
+            
+            System.out.println(Arrays.deepToString(s.weights));
         }
 
     }
