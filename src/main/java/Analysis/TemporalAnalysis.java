@@ -6,12 +6,13 @@ import Utils.GzipReader;
 import Utils.Parser;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -39,13 +40,42 @@ import org.apache.lucene.util.Version;
 import twitter4j.JSONException;
 import twitter4j.JSONObject;
 import net.seninp.jmotif.sax.alphabet.NormalAlphabet;
-import org.apache.commons.text.similarity.HammingDistance;
+import org.apache.lucene.analysis.util.CharArraySet;
 
 public class TemporalAnalysis {
 
-    public static String streamFilesLocation = "src/main/resources/sbn-data/stream/";
-    public static File[] subDirectories = new File(streamFilesLocation).listFiles((File file) -> file.isDirectory());
-    public static String resourcesLocation = "src/main/resources/";
+    public static final String STREAM_FILES_LOCATION = "src/main/resources/sbn-data/stream/";
+    public static final File[] SUB_DIRECTORIES = new File(STREAM_FILES_LOCATION).listFiles((File file) -> file.isDirectory());
+    public static final String RESOURCES_LOCATION = "src/main/resources/";
+    public static final String STOPWORDS_FILE = "stopwords.txt";
+    public static final CharArraySet STOPWORDS;
+
+    // add aditional terms to the default set of standard stop words
+    static {
+        STOPWORDS = CharArraySet.copy(Version.LUCENE_41, ItalianAnalyzer.getDefaultStopSet());
+
+        try {
+            FileInputStream inputStream;
+            InputStreamReader inputReader;
+            BufferedReader br;
+
+            inputStream = new FileInputStream(RESOURCES_LOCATION + STOPWORDS_FILE);
+            inputReader = new InputStreamReader(inputStream);
+            br = new BufferedReader(inputReader);
+
+            String stopword;
+            ArrayList<String> stopwords = new ArrayList();
+
+            while ((stopword = br.readLine()) != null) {
+                stopwords.add(stopword);
+            }
+
+            STOPWORDS.addAll(stopwords);
+
+        } catch (IOException ex) {
+            System.out.println(ex.getMessage());
+        }
+    }
 
     private static HashMap<String, HashMap<String, Integer>> loadPoliticiansNames() {
         HashMap<String, Integer> yes_supporters = new HashMap<>();
@@ -87,7 +117,7 @@ public class TemporalAnalysis {
         Document document;
 
         // create the indexes (one for the yes supporters and another for the no)
-        ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41);
+        ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, STOPWORDS);
         IndexWriterConfig cfg = new IndexWriterConfig(Version.LUCENE_41, analyzer);
         File yesIndexFile = new File(INDEX_DIRECTORY + "yes_index/");
         FSDirectory yesIndex = FSDirectory.open(yesIndexFile);
@@ -98,7 +128,7 @@ public class TemporalAnalysis {
 
         HashMap<String, HashMap<String, Integer>> politicians; //[0] = yes_supporters, [1] = no_supporters
         politicians = loadPoliticiansNames();
-        for (File subDirectory : subDirectories) {
+        for (File subDirectory : SUB_DIRECTORIES) {
             System.out.println("Reading files from the directory " + subDirectory.getName());
 
             // get all the files inside 'subDirectory'
@@ -192,7 +222,7 @@ public class TemporalAnalysis {
      */
     private static LinkedHashSet<String> getTokens(String tweet) throws IOException, Exception {
         RAMDirectory ramDir = new RAMDirectory();
-        ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41);
+        ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, STOPWORDS);
         IndexWriterConfig conf = new IndexWriterConfig(Version.LUCENE_41, analyzer);
         IndexWriter ramIW = new IndexWriter(ramDir, conf);
         Document doc = new Document();
@@ -275,7 +305,7 @@ public class TemporalAnalysis {
         hmTermFrequencies.keySet().forEach((term) -> {
             String sax;
             try {
-                SAXBuilder saxUtils = new SAXBuilder(alphabetSize, Math.round(alphabetSize / maxFreq ), new NormalAlphabet());
+                SAXBuilder saxUtils = new SAXBuilder(alphabetSize, Math.round(alphabetSize / maxFreq), new NormalAlphabet());
                 sax = saxUtils.buildSAX(hmTermFrequencies.get(term));
                 hmTermSAX.put(term, sax);
             } catch (SAXException ex) {
@@ -291,8 +321,33 @@ public class TemporalAnalysis {
         clusters.keySet().forEach((saxString) -> {
             pw.println(saxString + " " + clusters.get(saxString));
         });
-        
+
         pw.close();
+    }
+
+    /*
+    map a cluster of SAX strings to the cluster of terms that they represent.
+    For example, the cluster
+        aabcad 0
+        caabda 1
+        ahrfaa 1
+    may be converted to
+        italia 0
+        oggi 1
+        macchina 1
+     */
+    private static HashMap<String, Integer> mapSAXClusterToTermCluster(HashMap<String, Integer> hmSAXClusters, HashMap<String, String> hmTermSAX) {
+        HashMap<String, Integer> termClusters = new HashMap<>();
+        String sax;
+
+        // iterate through all the terms, assigning to them the correspondent cluster
+        // of their SAX string
+        for (String term : hmTermSAX.keySet()) {
+            sax = hmTermSAX.get(term);
+            termClusters.put(term, hmSAXClusters.get(sax));
+        }
+
+        return termClusters;
     }
 
     /*
@@ -332,13 +387,18 @@ public class TemporalAnalysis {
         HashMap<String, String> hmNoTermSAX = fromFreqVectorsToSAXStrings(hmNoTermFreqVector, alphabetSize);
 
         KMeans yesKMeans = new KMeans(k, alphabetSize, new ArrayList<>(hmYesTermSAX.values()));
-        HashMap<String, Integer> yesClusters = yesKMeans.getClusters();
-        
-        KMeans noKMeans = new KMeans(k, alphabetSize, new ArrayList<>(hmNoTermSAX.values()));
-        HashMap<String, Integer> noClusters = noKMeans.getClusters();
+        HashMap<String, Integer> yesSAXClusters = yesKMeans.getClusters();
 
-        saveClusterOnHardDisk(yesClusters, resourcesLocation + "yesClusters.txt");
-        saveClusterOnHardDisk(noClusters, resourcesLocation + "noClusters.txt");
+        KMeans noKMeans = new KMeans(k, alphabetSize, new ArrayList<>(hmNoTermSAX.values()));
+        HashMap<String, Integer> noSAXClusters = noKMeans.getClusters();
+
+        // from the SAX strings, get back to the terms, generating the clusters
+        // for the terms, not the SAX that represent the term frequency vector
+        HashMap<String, Integer> yesClusters = mapSAXClusterToTermCluster(yesSAXClusters, hmYesTermSAX);
+        HashMap<String, Integer> noClusters = mapSAXClusterToTermCluster(noSAXClusters, hmNoTermSAX);
+
+        saveClusterOnHardDisk(yesClusters, RESOURCES_LOCATION + "yesClusters.txt");
+        saveClusterOnHardDisk(noClusters, RESOURCES_LOCATION + "noClusters.txt");
     }
 
 }

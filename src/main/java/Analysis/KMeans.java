@@ -7,6 +7,9 @@ import java.util.LinkedHashSet;
 import org.apache.commons.text.CharacterPredicates;
 import org.apache.commons.text.RandomStringGenerator;
 
+/*
+A K-Means algorithm to cluster SAX strings.
+*/
 public class KMeans {
 
     private final HashMap<String, Integer> hmSaxCluster;
