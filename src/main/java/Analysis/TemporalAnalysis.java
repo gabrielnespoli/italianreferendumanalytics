@@ -47,7 +47,7 @@ public class TemporalAnalysis {
     public static final String STREAM_FILES_LOCATION = "src/main/resources/sbn-data/stream/";
     public static final File[] SUB_DIRECTORIES = new File(STREAM_FILES_LOCATION).listFiles((File file) -> file.isDirectory());
     public static final String RESOURCES_LOCATION = "src/main/resources/";
-    public static final String STOPWORDS_FILE = "stopwords.txt";
+    public static final String STOPWORDS_FILENAME = "stopwords.txt";
     public static final CharArraySet STOPWORDS;
 
     // add aditional terms to the default set of standard stop words
@@ -59,7 +59,7 @@ public class TemporalAnalysis {
             InputStreamReader inputReader;
             BufferedReader br;
 
-            inputStream = new FileInputStream(RESOURCES_LOCATION + STOPWORDS_FILE);
+            inputStream = new FileInputStream(RESOURCES_LOCATION + STOPWORDS_FILENAME);
             inputReader = new InputStreamReader(inputStream);
             br = new BufferedReader(inputReader);
 

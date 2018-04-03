@@ -6,20 +6,20 @@
 package Analysis;
 
 import com.google.common.util.concurrent.AtomicDouble;
-import gnu.trove.map.TIntLongMap;
 import it.stilo.g.algo.ConnectedComponents;
 import it.stilo.g.algo.CoreDecomposition;
 import it.stilo.g.algo.GraphInfo;
 import it.stilo.g.algo.SubGraphByEdgesWeight;
 import it.stilo.g.structures.Core;
-import it.stilo.g.structures.WeightedDirectedGraph;
 import it.stilo.g.util.NodesMapper;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import it.stilo.g.algo.SubGraph;
+import it.stilo.g.algo.UnionDisjoint;
 import it.stilo.g.structures.WeightedUndirectedGraph;
-import it.stilo.g.util.GraphWriter;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -28,7 +28,9 @@ import org.apache.lucene.queryparser.classic.ParseException;
 
 public class KcoreAndCC {
 
-    public static int getNumberClusters(String graph) throws IOException {
+    public static final String RESOURCES_LOCATION = "src/main/resources/";
+
+    private static int getNumberClusters(String graph) throws IOException {
         //String graph = "src/main/resources/yes_graph.txt";
         ReadFile rf = new ReadFile();
         String[] lines = rf.readLines(graph);
@@ -43,7 +45,7 @@ public class KcoreAndCC {
         return clusters.size();
     }
 
-    public static List<Integer> getNumberNodes(String graph, int c) throws IOException {
+    private static List<Integer> getNumberNodes(String graph, int c) throws IOException {
         //String graph = "src/main/resources/yes_graph.txt";
         ReadFile rf = new ReadFile();
         String[] lines = rf.readLines(graph);
@@ -65,7 +67,7 @@ public class KcoreAndCC {
         return numberNodes;
     }
 
-    public static WeightedUndirectedGraph addNodesGraph(WeightedUndirectedGraph g, int k, String graph, NodesMapper<String> mapper) throws IOException {
+    private static WeightedUndirectedGraph addNodesGraph(WeightedUndirectedGraph g, int k, String graph, NodesMapper<String> mapper) throws IOException {
         // add the nodes from the a file created with coocurrencegraph.java, and returns the graph
         //String graph = "src/main/resources/yes_graph.txt";
         ReadFile rf = new ReadFile();
@@ -73,7 +75,6 @@ public class KcoreAndCC {
 
         // map the words into id for g stilo
         //NodesMapper<String> mapper = new NodesMapper<String>();
-
         // creathe the graph
         // keep in mind that the id of a word is mapper.getId(s1) - 1 (important the -1)
         int n = lines.length;
@@ -93,7 +94,7 @@ public class KcoreAndCC {
         return g;
     }
 
-    public static WeightedUndirectedGraph normalizeGraph(WeightedUndirectedGraph g) {
+    private static WeightedUndirectedGraph normalizeGraph(WeightedUndirectedGraph g) {
         // normalize the weights of the edges
         // Normalize the weights
         double suma = 0;
@@ -117,20 +118,21 @@ public class KcoreAndCC {
         return g;
     }
 
-    public static WeightedUndirectedGraph kcore(WeightedUndirectedGraph g) throws InterruptedException {
+    private static WeightedUndirectedGraph kcore(WeightedUndirectedGraph g) throws InterruptedException {
         // calculates the kcore and returns a graph. Now its not working who knows why
-        Core cc = CoreDecomposition.getInnerMostCore(g, 1);
+        WeightedUndirectedGraph g1 = UnionDisjoint.copy(g, 2);
+        Core cc = CoreDecomposition.getInnerMostCore(g1, 1);
         System.out.println("Kcore");
         System.out.println("Minimum degree: " + cc.minDegree);
         System.out.println("Vertices: " + cc.seq.length);
         System.out.println("Seq: " + cc.seq);
 
-
-        WeightedUndirectedGraph s = SubGraph.extract(g, cc.seq, 1);
+        g1 = UnionDisjoint.copy(g, 2);
+        WeightedUndirectedGraph s = SubGraph.extract(g1, cc.seq, 1);
         return s;
     }
 
-    public static WeightedUndirectedGraph getLargestCC(WeightedUndirectedGraph g) throws InterruptedException {
+    private static WeightedUndirectedGraph getLargestCC(WeightedUndirectedGraph g) throws InterruptedException {
         // this get the largest component of the graph and returns a graph too
         System.out.println(Arrays.deepToString(g.weights));
         int[] all = new int[g.size];
@@ -164,59 +166,85 @@ public class KcoreAndCC {
 
     }
 
-    public static void main(String[] args) throws IOException, ParseException, Exception {
+    /* 
+    iterate through all the edges, recovering the terms.
+    'edges' is a matrix, in which each row is a termID1, and in each column is 
+    another termID2 that has an edge with termID1. 
+    Ex:
+    [0] = [1, 5, 6]
+    [1] = [0, 8]
+    ...
+    Map back each termID to the term string and save to the edges in the following
+    format:
+    term1 term2 clusterID
+     */
+    private static void saveGraphToFile(PrintWriter pw, NodesMapper<String> mapper, int[][] edges, int clusterID) throws IOException {
+        String term1 = "", term2 = "";
+
+        for (int i = 0; i < edges.length; i++) {
+            if (edges[i] != null) {
+                term1 = mapper.getNode(i + 1);
+                for (int j = 0; j < edges[i].length; j++) {
+                    term2 = mapper.getNode(edges[i][j] + 1);
+                    pw.println(term1 + " " + term2 + " " + clusterID);
+                }
+            }
+        }
+    }
+
+    public static void extractKCoreAndConnectedComponent() throws IOException, ParseException, Exception {
 
         // when the nodes have an edge less than this, remove the edge
-        double t = 0.1;
+        double t = 0.2;
 
-        // Get the number of clusters
-        int c = getNumberClusters("src/main/resources/yes_graph.txt");
+        // do the same analysis for the yes-group and no-group
+        String[] prefixYesNo = {"yes", "no"};
+        for (String prefix : prefixYesNo) {
 
-        // Get the number of nodes inside each cluster
-        List<Integer> numberNodes = getNumberNodes("src/main/resources/yes_graph.txt", c);
+            // Get the number of clusters
+            int c = getNumberClusters(RESOURCES_LOCATION + prefix + "_graph.txt");
 
-        // create the array of graphs
-        WeightedUndirectedGraph[] gArray = new WeightedUndirectedGraph[c];
-        WeightedUndirectedGraph[] gCC = new WeightedUndirectedGraph[c];
-        for (int i = 0; i < 1; i++) {
-            System.out.println();
-            System.out.println("Cluster " + i);
+            // Get the number of nodes inside each cluster
+            List<Integer> numberNodes = getNumberNodes(RESOURCES_LOCATION + prefix + "_graph.txt", c);
 
-            gArray[i] = new WeightedUndirectedGraph(numberNodes.get(i) + 1);
+            PrintWriter pw_cc = new PrintWriter(new FileWriter(RESOURCES_LOCATION + prefix + "_largestcc.txt")); //open the file where the largest connected component will be written to
+            PrintWriter pw_kcore = new PrintWriter(new FileWriter(RESOURCES_LOCATION + prefix + "_kcore.txt")); //open the file where the kcore will be written to
 
-            // Put the nodes
-            NodesMapper<String> mapper = new NodesMapper<String>();
-            gArray[i] = addNodesGraph(gArray[i], i, "src/main/resources/yes_graph.txt", mapper);
+            // create the array of graphs
+            WeightedUndirectedGraph[] gArray = new WeightedUndirectedGraph[c];
+            WeightedUndirectedGraph[] gCC = new WeightedUndirectedGraph[c];
+            for (int i = 0; i < c; i++) {
+                System.out.println();
+                System.out.println("Cluster " + i);
 
-            //normalize the weights
-            gArray[i] = normalizeGraph(gArray[i]);
+                gArray[i] = new WeightedUndirectedGraph(numberNodes.get(i) + 1);
 
-            AtomicDouble[] info = GraphInfo.getGraphInfo(gArray[i], 1);
-            System.out.println("Nodes:" + info[0]);
-            System.out.println("Edges:" + info[1]);
-            System.out.println("Density:" + info[2]);
+                // Put the nodes,
+                NodesMapper<String> mapper = new NodesMapper<String>();
+                gArray[i] = addNodesGraph(gArray[i], i, RESOURCES_LOCATION + prefix + "_graph.txt", mapper);
 
-            
-            // extract remove the edges with w<t
-            gArray[i] = SubGraphByEdgesWeight.extract(gArray[i], t, 1);
-            
-            // get the largest CC
-            WeightedUndirectedGraph s = getLargestCC(gArray[i]);
-            
-            // To Do: export the graph s and use mapped to get back the words:
-            // word = mapper.getNode(nodeID + 1)
- 
-            
-            
-            
-            
-            //System.out.println(Arrays.deepToString(s.out));
+                //normalize the weights
+                gArray[i] = normalizeGraph(gArray[i]);
 
-            // save
-            
-            // Get the inner core
-            //WeightedUndirectedGraph sk = kcore(gArray[i]);
-            //System.out.println(Arrays.deepToString(sk.weights));
+                AtomicDouble[] info = GraphInfo.getGraphInfo(gArray[i], 1);
+                System.out.println("Nodes:" + info[0]);
+                System.out.println("Edges:" + info[1]);
+                System.out.println("Density:" + info[2]);
+
+                // extract remove the edges with w<t
+                gArray[i] = SubGraphByEdgesWeight.extract(gArray[i], t, 1);
+
+                // get the largest CC and save to a file
+                WeightedUndirectedGraph largestCC = getLargestCC(gArray[i]);
+                saveGraphToFile(pw_cc, mapper, largestCC.in, i);
+
+                // Get the inner core and save to a file
+                WeightedUndirectedGraph kcore = kcore(gArray[i]);
+                saveGraphToFile(pw_kcore, mapper, kcore.in, i);
+            }
+
+            pw_cc.close();
+            pw_kcore.close();
         }
 
     }
