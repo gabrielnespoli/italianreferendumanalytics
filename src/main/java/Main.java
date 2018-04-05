@@ -10,7 +10,7 @@ public class Main {
         boolean useCache = true;
         TemporalAnalysis.clusterTopNTerms(useCache, 1000, 12, 20);
         CoocurrenceGraph.generateCoocurrenceGraph();
-        KcoreAndCC.extractKCoreAndConnectedComponent(0.05);
+        KcoreAndCC.extractKCoreAndConnectedComponent(0.07);
         TemporalAnalysis.compareTimeSeriesOfTerms(3);
     }
 }
