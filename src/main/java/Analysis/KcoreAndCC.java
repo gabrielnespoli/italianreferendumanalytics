@@ -5,6 +5,7 @@
  */
 package Analysis;
 
+import Utils.ReadFile;
 import com.google.common.util.concurrent.AtomicDouble;
 import it.stilo.g.algo.ConnectedComponents;
 import it.stilo.g.algo.CoreDecomposition;
@@ -18,11 +19,16 @@ import java.util.List;
 import it.stilo.g.algo.SubGraph;
 import it.stilo.g.algo.UnionDisjoint;
 import it.stilo.g.structures.WeightedUndirectedGraph;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileWriter;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import org.apache.lucene.queryparser.classic.ParseException;
 
@@ -35,7 +41,7 @@ public class KcoreAndCC {
         ReadFile rf = new ReadFile();
         String[] lines = rf.readLines(graph);
 
-        Set<Double> clusters = new HashSet<Double>();
+        Set<Double> clusters = new HashSet<>();
         int n = lines.length;
         for (int i = 0; i < n; i++) {
             String[] line = lines[i].split(" ");
@@ -192,10 +198,7 @@ public class KcoreAndCC {
         }
     }
 
-    public static void extractKCoreAndConnectedComponent() throws IOException, ParseException, Exception {
-
-        // when the nodes have an edge less than this, remove the edge
-        double t = 0.2;
+    public static void extractKCoreAndConnectedComponent(double threshold) throws IOException, ParseException, Exception {
 
         // do the same analysis for the yes-group and no-group
         String[] prefixYesNo = {"yes", "no"};
@@ -232,7 +235,7 @@ public class KcoreAndCC {
                 System.out.println("Density:" + info[2]);
 
                 // extract remove the edges with w<t
-                gArray[i] = SubGraphByEdgesWeight.extract(gArray[i], t, 1);
+                gArray[i] = SubGraphByEdgesWeight.extract(gArray[i], threshold, 1);
 
                 // get the largest CC and save to a file
                 WeightedUndirectedGraph largestCC = getLargestCC(gArray[i]);
@@ -246,7 +249,39 @@ public class KcoreAndCC {
             pw_cc.close();
             pw_kcore.close();
         }
-
     }
 
+    /* 
+    Iterate through the file of kcore/CC identifying each cluster and 
+    storing it as a hashmap that the keys are the cluster IDs and the 
+    values are the sets.
+    Ex:
+        "0": {"hi", "hello"}
+        "1": {"Brazil", "Spain"}
+     */
+    public static HashMap<Integer, LinkedHashSet<String>> loadClusters(String clusterDirectory) throws IOException {
+        FileInputStream is = new FileInputStream(clusterDirectory);
+        InputStreamReader ir = new InputStreamReader(is);
+        BufferedReader br = new BufferedReader(ir);
+        String line;
+        String[] lineSplit;
+        String term;
+        Integer clusterID;
+        LinkedHashSet<String> cluster;
+        HashMap<Integer, LinkedHashSet<String>> hmClusterIDTerms = new HashMap<>();
+        while ((line = br.readLine()) != null) {
+            lineSplit = line.split(" ");
+            term = lineSplit[0];
+            clusterID = Integer.parseInt(lineSplit[2]);
+
+            //update the cluster 'clusterID' adding 'term'. Instantiate the cluster if it's empty
+            if ((cluster = hmClusterIDTerms.get(clusterID)) == null) {
+                cluster = new LinkedHashSet<>();
+            }
+            cluster.add(term);
+            hmClusterIDTerms.put(clusterID, cluster);
+        }
+
+        return hmClusterIDTerms;
+    }
 }

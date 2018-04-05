@@ -1,9 +1,9 @@
 package Analysis;
 
 import Utils.CSVUtils;
-import static Utils.CSVUtils.INDEX_DIRECTORY;
 import Utils.GzipReader;
 import Utils.Parser;
+import Utils.TimeSeriesPlotter;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,13 +40,15 @@ import org.apache.lucene.util.Version;
 import twitter4j.JSONException;
 import twitter4j.JSONObject;
 import net.seninp.jmotif.sax.alphabet.NormalAlphabet;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.lucene.analysis.util.CharArraySet;
 
 public class TemporalAnalysis {
 
     public static final String STREAM_FILES_LOCATION = "src/main/resources/sbn-data/stream/";
     public static final File[] SUB_DIRECTORIES = new File(STREAM_FILES_LOCATION).listFiles((File file) -> file.isDirectory());
-    public static final String RESOURCES_LOCATION = "src/main/resources/";
+    public static final String RESOURCES_DIRECTORY = "src/main/resources/";
+    public static final String INDEX_DIRECTORY = "src/main/resources/";
     public static final String STOPWORDS_FILENAME = "stopwords.txt";
     public static final CharArraySet STOPWORDS;
 
@@ -59,7 +61,7 @@ public class TemporalAnalysis {
             InputStreamReader inputReader;
             BufferedReader br;
 
-            inputStream = new FileInputStream(RESOURCES_LOCATION + STOPWORDS_FILENAME);
+            inputStream = new FileInputStream(RESOURCES_DIRECTORY + STOPWORDS_FILENAME);
             inputReader = new InputStreamReader(inputStream);
             br = new BufferedReader(inputReader);
 
@@ -207,12 +209,28 @@ public class TemporalAnalysis {
         return minMaxDates;
     }
 
+    /*
+    Lucene returns the top N terms in an uncommon array of objects of the type TermStats.
+    This method convert the array of TermStats to a list of strings.
+     */
+    private static ArrayList<String> fromTermStatsToList(TermStats[] termsStats) {
+        ArrayList<String> termsList = new ArrayList<>();
+
+        for (TermStats term : termsStats) {
+            termsList.add(term.termtext.utf8ToString());
+        }
+
+        return termsList;
+    }
+
     // return an index in memory with the top N terms that are present in the index where the tweets are stores (the main index)
-    private static TermStats[] getNTopTermsIndex(int N, String indexDirectory) throws IOException, Exception {
+    private static ArrayList<String> getNTopTermsIndex(int N, String indexDirectory) throws IOException, Exception {
         File indexFile = new File(indexDirectory);
         FSDirectory indexFSDirectory = FSDirectory.open(indexFile);
         IndexReader indexReader = DirectoryReader.open(indexFSDirectory);
-        return HighFreqTerms.getHighFreqTerms(indexReader, N, "term");
+        TermStats[] termStats = HighFreqTerms.getHighFreqTerms(indexReader, N, "term");
+
+        return fromTermStatsToList(termStats);
     }
 
     /*
@@ -242,19 +260,19 @@ public class TemporalAnalysis {
     Create a vector of frequencies for each term in the top N terms and store in a vector in which each
     position of the vector represents and interval between maxDate and minDate
      */
-    private static HashMap<String, double[]> createVectorsOfFrequencies(String directoryIndex, TermStats[] topTerms, long maxDate, long minDate, long intervalDate) throws IOException, Exception {
+    private static HashMap<String, double[]> createTermsTimeSeries(String indexDirectory, ArrayList<String> topTerms, long maxDate, long minDate, long intervalDate) throws IOException, Exception {
         //initialize the vector of frequencies inside the hashmap for all terms. The index of this vector is define as [minDate, minDate+interval, minDate+2*interval,...]
         HashMap<String, double[]> vectorOfTermsFrequencies = new HashMap<>();
         int numberSlots = (int) Math.ceil((maxDate - minDate) / intervalDate) + 1;
-        for (TermStats term : topTerms) {
-            vectorOfTermsFrequencies.put(term.termtext.utf8ToString(), new double[numberSlots]);
-        }
+        topTerms.forEach((term) -> {
+            vectorOfTermsFrequencies.put(term, new double[numberSlots]);
+        });
 
         /*
         iterate through all documents, getting all terms. If the term is one of the topN, then increment the 
         frequency of the term in that interval. Each interval (usually 12h) is one position of the vector 'vecFrequencies'.
          */
-        File indexFile = new File(directoryIndex);
+        File indexFile = new File(indexDirectory);
         FSDirectory indexFSDirectory = FSDirectory.open(indexFile);
         IndexReader indexReader = DirectoryReader.open(indexFSDirectory);
         Document doc;
@@ -366,8 +384,8 @@ public class TemporalAnalysis {
             createIndex();
         }
 
-        TermStats[] yesNTopTerms = getNTopTermsIndex(N, INDEX_DIRECTORY + "yes_index");
-        TermStats[] noNTopTerms = getNTopTermsIndex(N, INDEX_DIRECTORY + "no_index");
+        ArrayList<String> yesNTopTerms = getNTopTermsIndex(N, INDEX_DIRECTORY + "yes_index");
+        ArrayList<String> noNTopTerms = getNTopTermsIndex(N, INDEX_DIRECTORY + "no_index");
 
         long[] minMaxDates = getMinMaxDates();
         long min = minMaxDates[0];
@@ -378,13 +396,13 @@ public class TemporalAnalysis {
         c.add(Calendar.HOUR, timeInterval);
         long interval = c.getTime().getTime() - min;
 
-        HashMap<String, double[]> hmYesTermFreqVector = createVectorsOfFrequencies(INDEX_DIRECTORY + "yes_index", yesNTopTerms, max, min, interval);
-        HashMap<String, double[]> hmNoTermFreqVector = createVectorsOfFrequencies(INDEX_DIRECTORY + "no_index", noNTopTerms, max, min, interval);
+        HashMap<String, double[]> hmYesTermsTS = createTermsTimeSeries(INDEX_DIRECTORY + "yes_index", yesNTopTerms, max, min, interval);
+        HashMap<String, double[]> hmNoTermsTS = createTermsTimeSeries(INDEX_DIRECTORY + "no_index", noNTopTerms, max, min, interval);
 
         //for each term create a SAX that represents the frequencies vector
         int alphabetSize = 20;
-        HashMap<String, String> hmYesTermSAX = fromFreqVectorsToSAXStrings(hmYesTermFreqVector, alphabetSize);
-        HashMap<String, String> hmNoTermSAX = fromFreqVectorsToSAXStrings(hmNoTermFreqVector, alphabetSize);
+        HashMap<String, String> hmYesTermSAX = fromFreqVectorsToSAXStrings(hmYesTermsTS, alphabetSize);
+        HashMap<String, String> hmNoTermSAX = fromFreqVectorsToSAXStrings(hmNoTermsTS, alphabetSize);
 
         KMeans yesKMeans = new KMeans(k, alphabetSize, new ArrayList<>(hmYesTermSAX.values()));
         HashMap<String, Integer> yesSAXClusters = yesKMeans.getClusters();
@@ -397,8 +415,83 @@ public class TemporalAnalysis {
         HashMap<String, Integer> yesClusters = mapSAXClusterToTermCluster(yesSAXClusters, hmYesTermSAX);
         HashMap<String, Integer> noClusters = mapSAXClusterToTermCluster(noSAXClusters, hmNoTermSAX);
 
-        saveClusterOnHardDisk(yesClusters, RESOURCES_LOCATION + "yesClusters.txt");
-        saveClusterOnHardDisk(noClusters, RESOURCES_LOCATION + "noClusters.txt");
+        saveClusterOnHardDisk(yesClusters, RESOURCES_DIRECTORY + "yesClusters.txt");
+        saveClusterOnHardDisk(noClusters, RESOURCES_DIRECTORY + "noClusters.txt");
     }
 
+    private static ImmutableTriple<ArrayList<String>, ArrayList<double[]>, ArrayList<double[]>> processTSDataToPlot(HashMap<String, double[]> hmTermsTS, int timeInterval) {
+        ArrayList<String> labels = new ArrayList<>();
+        ArrayList<double[]> xvaluesList = new ArrayList<>();
+        ArrayList<double[]> yvaluesList = new ArrayList<>();
+        int timeSeriesSize = 0;
+        
+        // read one yvalues just to calculate the size of the time series to instantiate xvalues
+        for (double[] yvalues : hmTermsTS.values()) {
+            timeSeriesSize = yvalues.length;
+            break;
+        }
+        
+        final double[] xvalues = new double[timeSeriesSize];
+        
+        // the xvalues are the time domain, starting from 0, hopping no interval of timeInterval. The xvalues will be the same for all time series
+        for (int i = 0; i < xvalues.length - 1; i++) {
+            xvalues[i] = timeInterval * (i - 1);
+        }
+            
+        // the yvalues are the term frequencies
+        hmTermsTS.keySet().forEach((term) -> {
+            labels.add(term);
+            xvaluesList.add(xvalues);
+            yvaluesList.add(hmTermsTS.get(term));
+        });
+        
+        return new ImmutableTriple<>(labels, xvaluesList, yvaluesList);
+    }
+    
+    /*
+    The method 
+    */
+    public static void compareTimeSeriesOfTerms(int timeInterval) throws Exception {
+        HashMap<Integer, LinkedHashSet<String>> clusters;
+        ArrayList<String> terms;
+        String clusterDirectory, indexDirectory, graphTitle;
+        
+        long[] minMaxDates = getMinMaxDates();
+        long min = minMaxDates[0];
+        long max = minMaxDates[1];
+        //calculate the interval in type long
+        Calendar c = Calendar.getInstance(Locale.US);
+        c.setTime(new Date(min));
+        c.add(Calendar.HOUR, timeInterval);
+        long interval = c.getTime().getTime() - min;
+
+        String[] prefixYesNo = {"yes", "no"};
+        String[] clusterTypes = {"kcore", "largestcc"};
+        for (String prefix : prefixYesNo) {
+            indexDirectory = INDEX_DIRECTORY + prefix + "_index";
+            for(String clusterType : clusterTypes) {
+                clusterDirectory = RESOURCES_DIRECTORY + prefix + "_" + clusterType + ".txt";
+                clusters = KcoreAndCC.loadClusters(clusterDirectory);
+                
+                // iterate through all the clusters plotting the time series of all terms in the cluster
+                for(Integer clusterID : clusters.keySet()) {
+                
+                    terms = new ArrayList<>(clusters.get(clusterID));
+                    HashMap<String, double[]> hmTermsTS = createTermsTimeSeries(indexDirectory, terms, max, min, interval);
+                    
+                    ImmutableTriple<ArrayList<String>, ArrayList<double[]>, ArrayList<double[]>> dataToPlot = processTSDataToPlot(hmTermsTS, timeInterval);
+                    
+                    ArrayList<String> labels = dataToPlot.getLeft();
+                    ArrayList<double[]> xvaluesList = dataToPlot.getMiddle();
+                    ArrayList<double[]> yvaluesList = dataToPlot.getRight();
+                    graphTitle = "Evolution of terms frequency on time (parameters: "+ prefix + ", " + clusterType + ")";
+                    TimeSeriesPlotter tsPlotter = new TimeSeriesPlotter(graphTitle, labels, xvaluesList, yvaluesList);
+                    tsPlotter.plot();
+                }
+
+            }
+        }
+        
+
+    }
 }
