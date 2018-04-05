@@ -32,7 +32,7 @@ import static org.apache.lucene.util.Version.LUCENE_41;
  */
 public class CoocurrenceGraph {
 
-    public static void Write(List<String> s1, List<String> s2, List<Integer> w, String fn) {
+    public static void Write(List<String> s1, List<String> s2, List<Integer> w, List<Integer> c, String fn) {
 
         try {
             FileWriter fr = new FileWriter(fn);
@@ -40,7 +40,7 @@ public class CoocurrenceGraph {
             PrintWriter out = new PrintWriter(br);
             for (int i = 0; i < s1.size(); i++) {
                 if (s1.get(i) != null) {
-                    out.write(s1.get(i) + " " + s2.get(i) + " " + w.get(i));
+                    out.write(s1.get(i) + " " + s2.get(i) + " " + w.get(i) + " " + c.get(i));
                 }
                 out.write("\n");
             }
@@ -76,36 +76,35 @@ public class CoocurrenceGraph {
         List<String> col1 = new ArrayList<>();
         List<String> col2 = new ArrayList<>();
         List<Integer> weight = new ArrayList<>();
+        List<Integer> c = new ArrayList<>();
 
         ReadFile rf = new ReadFile();
 
         String[] lines = rf.readLines(cluster);
-/*
-        for (String line : lines) {
-            String[] parts = line.split(" ");
-            System.out.println(line);
-        }*/
+
 
         for (int i = 0; i < lines.length; i++) {
             System.out.println((float) i/lines.length*100 + "%");
             String[] partsi = lines[i].split(" ");
             int resulti = Integer.parseInt(partsi[1]);
-            for (int j = 0; j < lines.length; j++) {
+            for (int j = i ; j < lines.length; j++) {
                 String[] partsj = lines[j].split(" ");
                 int resultj = Integer.parseInt(partsj[1]);
-                if (resultj > resulti) {
+                if (resultj == resulti && !partsi[0].equals(partsj[0])) {
                     int count = countCoocurrence(partsi[0], partsj[0], ir);
+                    //System.out.println(count);
                     if (count > 0) {
                         col1.add(partsi[0]);
                         col2.add(partsj[0]);
                         weight.add(count);
+                        c.add(resultj);
                     }
 
                 }
             }
         }
 
-        Write(col1, col2, weight, outputFile);
+        Write(col1, col2, weight, c, outputFile);
         System.out.println("Done");
 
     }
