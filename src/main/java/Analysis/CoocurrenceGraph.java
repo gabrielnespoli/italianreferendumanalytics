@@ -5,10 +5,10 @@
  */
 package Analysis;
 
+import Utils.ReadFile;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -71,7 +71,7 @@ public class CoocurrenceGraph {
 
         File directoryIndex = new File(indexFolder);
         IndexReader ir = DirectoryReader.open(FSDirectory.open(directoryIndex));
-        
+
         // Save here the graph
         List<String> col1 = new ArrayList<>();
         List<String> col2 = new ArrayList<>();
@@ -81,10 +81,14 @@ public class CoocurrenceGraph {
         ReadFile rf = new ReadFile();
 
         String[] lines = rf.readLines(cluster);
-
+        /*
+        for (String line : lines) {
+            String[] parts = line.split(" ");
+            System.out.println(line);
+        }*/
 
         for (int i = 0; i < lines.length; i++) {
-            System.out.println((float) i/lines.length*100 + "%");
+            System.out.println((float) i / lines.length * 100 + "%");
             String[] partsi = lines[i].split(" ");
             int resulti = Integer.parseInt(partsi[1]);
             for (int j = i ; j < lines.length; j++) {
@@ -109,7 +113,7 @@ public class CoocurrenceGraph {
 
     }
 
-    public static void main(String[] args) throws IOException, ParseException, Exception {
+    public static void generateCoocurrenceGraph() throws IOException, ParseException, Exception {
         String clusterYes = "src/main/resources/yesClusters.txt";
         String clusterNo = "src/main/resources/noClusters.txt";
 
