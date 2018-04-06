@@ -8,8 +8,8 @@
  */
 package Analysis;
 
-import Utils.GzipReader;
-import Utils.Parser;
+import IO.GzipReader;
+import PreProcess.Parser;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;

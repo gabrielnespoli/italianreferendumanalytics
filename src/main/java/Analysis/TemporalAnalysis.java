@@ -1,8 +1,8 @@
 package Analysis;
 
-import Utils.CSVUtils;
-import Utils.GzipReader;
-import Utils.Parser;
+import IO.CSVUtils;
+import IO.GzipReader;
+import PreProcess.Parser;
 import Utils.TimeSeriesPlotter;
 import java.io.BufferedReader;
 import java.io.File;
@@ -43,7 +43,7 @@ import net.seninp.jmotif.sax.alphabet.NormalAlphabet;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.lucene.analysis.util.CharArraySet;
 
-public class TemporalAnalysis {
+public abstract class TemporalAnalysis {
 
     public static final String STREAM_FILES_LOCATION = "src/main/resources/sbn-data/stream/";
     public static final File[] SUB_DIRECTORIES = new File(STREAM_FILES_LOCATION).listFiles((File file) -> file.isDirectory());
@@ -79,21 +79,21 @@ public class TemporalAnalysis {
         }
     }
 
-    private static HashMap<String, HashMap<String, Integer>> loadPoliticiansNames() {
-        HashMap<String, Integer> yes_supporters = new HashMap<>();
-        HashMap<String, Integer> no_supporters = new HashMap<>();
+    private static HashMap<String, LinkedHashSet<String>> loadPoliticiansNames() {
+        LinkedHashSet<String> yes_supporters = new LinkedHashSet<>();
+        LinkedHashSet<String> no_supporters = new LinkedHashSet<>();
 
-        CSVUtils.csvFile = "politicians_loaded.csv";
-        List<String[]> politicians = CSVUtils.readCSV();
+        String csvFile = "src/main/resources/politicians.csv";
+        List<String[]> politicians = CSVUtils.readCSV(csvFile, ";");
 
         politicians.forEach((politicianPair) -> {
-            yes_supporters.put(politicianPair[0], 1);
+            yes_supporters.add(politicianPair[0]);
             if (politicianPair.length != 1) {
-                no_supporters.put(politicianPair[1], 1);
+                no_supporters.add(politicianPair[1]);
             }
         });
 
-        HashMap<String, HashMap<String, Integer>> supporters = new HashMap<>();
+        HashMap<String, LinkedHashSet<String>> supporters = new HashMap<>();
         supporters.put("yes", yes_supporters);
         supporters.put("no", no_supporters);
         return supporters;
@@ -128,7 +128,7 @@ public class TemporalAnalysis {
         FSDirectory noIndex = FSDirectory.open(noIndexFile);
         IndexWriter noIndexWriter = new IndexWriter(noIndex, cfg);
 
-        HashMap<String, HashMap<String, Integer>> politicians; //[0] = yes_supporters, [1] = no_supporters
+        HashMap<String, LinkedHashSet<String>> politicians; //[0] = yes_supporters, [1] = no_supporters
         politicians = loadPoliticiansNames();
         for (File subDirectory : SUB_DIRECTORIES) {
             System.out.println("Reading files from the directory " + subDirectory.getName());
@@ -150,11 +150,11 @@ public class TemporalAnalysis {
                     }
 
                     //just accept for the analysis the tweets from the politicians
-                    if (politicians.get("yes").containsKey(user) || politicians.get("yes").containsKey(rtUser)) {
+                    if (politicians.get("yes").contains(user) || politicians.get("yes").contains(rtUser)) {
                         tweet = (String) json.get("text");
                         document = toLuceneDocument(tweet, user, rtUser, (String) json.get("created_at")); //create the Lucene Document
                         yesIndexWriter.addDocument(document); // add the document to the index
-                    } else if (politicians.get("no").containsKey(user) || politicians.get("no").containsKey(rtUser)) {
+                    } else if (politicians.get("no").contains(user) || politicians.get("no").contains(rtUser)) {
                         tweet = (String) json.get("text");
                         document = toLuceneDocument(tweet, user, rtUser, (String) json.get("created_at")); //create the Lucene Document
                         noIndexWriter.addDocument(document); // add the document to the index
@@ -162,6 +162,7 @@ public class TemporalAnalysis {
                 }
             }
         }
+        
         yesIndexWriter.commit(); // write the index to the file opened to "store" the index
         yesIndexWriter.close();
         noIndexWriter.commit(); // write the index to the file opened to "store" the index
@@ -424,38 +425,39 @@ public class TemporalAnalysis {
         ArrayList<double[]> xvaluesList = new ArrayList<>();
         ArrayList<double[]> yvaluesList = new ArrayList<>();
         int timeSeriesSize = 0;
-        
+
         // read one yvalues just to calculate the size of the time series to instantiate xvalues
         for (double[] yvalues : hmTermsTS.values()) {
             timeSeriesSize = yvalues.length;
             break;
         }
-        
+
         final double[] xvalues = new double[timeSeriesSize];
-        
+
         // the xvalues are the time domain, starting from 0, hopping no interval of timeInterval. The xvalues will be the same for all time series
         for (int i = 0; i < xvalues.length - 1; i++) {
             xvalues[i] = timeInterval * (i - 1);
         }
-            
+
         // the yvalues are the term frequencies
         hmTermsTS.keySet().forEach((term) -> {
             labels.add(term);
             xvaluesList.add(xvalues);
             yvaluesList.add(hmTermsTS.get(term));
         });
-        
+
         return new ImmutableTriple<>(labels, xvaluesList, yvaluesList);
     }
-    
+
     /*
-    The method 
-    */
-    public static void compareTimeSeriesOfTerms(int timeInterval) throws Exception {
+    The method generate a time series for all the terms in each cluster and plot
+    a graph comparing the evolution of the terms frequency.
+     */
+    public static void compareTimeSeriesOfTerms(int timeInterval, String[] prefixYesNo, String[] clusterTypes) throws Exception {
         HashMap<Integer, LinkedHashSet<String>> clusters;
         ArrayList<String> terms;
         String clusterDirectory, indexDirectory, graphTitle;
-        
+
         long[] minMaxDates = getMinMaxDates();
         long min = minMaxDates[0];
         long max = minMaxDates[1];
@@ -465,33 +467,30 @@ public class TemporalAnalysis {
         c.add(Calendar.HOUR, timeInterval);
         long interval = c.getTime().getTime() - min;
 
-        String[] prefixYesNo = {"yes", "no"};
-        String[] clusterTypes = {"kcore", "largestcc"};
         for (String prefix : prefixYesNo) {
             indexDirectory = INDEX_DIRECTORY + prefix + "_index";
-            for(String clusterType : clusterTypes) {
+            for (String clusterType : clusterTypes) {
                 clusterDirectory = RESOURCES_DIRECTORY + prefix + "_" + clusterType + ".txt";
                 clusters = KcoreAndCC.loadClusters(clusterDirectory);
-                
+
                 // iterate through all the clusters plotting the time series of all terms in the cluster
-                for(Integer clusterID : clusters.keySet()) {
-                
+                for (Integer clusterID : clusters.keySet()) {
+
                     terms = new ArrayList<>(clusters.get(clusterID));
                     HashMap<String, double[]> hmTermsTS = createTermsTimeSeries(indexDirectory, terms, max, min, interval);
-                    
+
                     ImmutableTriple<ArrayList<String>, ArrayList<double[]>, ArrayList<double[]>> dataToPlot = processTSDataToPlot(hmTermsTS, timeInterval);
-                    
+
                     ArrayList<String> labels = dataToPlot.getLeft();
                     ArrayList<double[]> xvaluesList = dataToPlot.getMiddle();
                     ArrayList<double[]> yvaluesList = dataToPlot.getRight();
-                    graphTitle = "Evolution of terms frequency on time (parameters: "+ prefix + ", " + clusterType + ")";
+                    graphTitle = "Evolution of terms frequency on time (parameters: " + prefix + ", " + clusterType + ")";
                     TimeSeriesPlotter tsPlotter = new TimeSeriesPlotter(graphTitle, labels, xvaluesList, yvaluesList);
                     tsPlotter.plot();
                 }
 
             }
         }
-        
 
     }
 }

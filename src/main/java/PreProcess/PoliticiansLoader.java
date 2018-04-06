@@ -5,49 +5,25 @@
  */
 package PreProcess;
 
-import Utils.CSVUtils;
+import IO.CSVUtils;
+import Utils.TwitterUtils;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import twitter4j.Query;
-import twitter4j.QueryResult;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
-import twitter4j.TwitterFactory;
 import twitter4j.User;
-import twitter4j.conf.ConfigurationBuilder;
 
-public class FindPoliticians {
+public abstract class PoliticiansLoader {
 
-    private static final int FOLLOWERSTHRESHOLD = 5000;
-
-    private static Twitter getTwitter() {
-        ConfigurationBuilder cfg = new ConfigurationBuilder();
-        cfg.setOAuthAccessToken("804265252221308928-QMQRe5XZPRSBmXqZTYD1ESzOoiNDY7y");
-        cfg.setOAuthAccessTokenSecret("ykK4tbpXus9Yggh41ChMnbct4mHjbc0gDxEcyOYerX9SD");
-        cfg.setOAuthConsumerKey("42Q1oVVQ8wDmWRPAk8tx0lMRk");
-        cfg.setOAuthConsumerSecret("MIjyDlLibLTwpZgUzIlttUvzhs3tdwDLwj7j5WPgQ3galoC7mK");
-        TwitterFactory tf = new TwitterFactory(cfg.build());
-        return tf.getInstance();
-    }
-
-    private static QueryResult findTweetsAboutReferendum(Twitter twitter) throws TwitterException {
-        Query query = new Query("#referendum");
-        query.setSince("2016-09-01");
-        query.setUntil("2016-12-05");
-
-        QueryResult result = twitter.search(query);
-        if (result.getTweets() == null || result.getTweets().isEmpty()) {
-            return null;
-        }
-        return result;
-    }
+    public static final int FOLLOWERSTHRESHOLD = 5000;
 
     private static String fromNameToTwitterID(String name) throws InterruptedException {
-        Twitter twitter = getTwitter();
+
+        Twitter twitter = TwitterUtils.getTwitter();
         boolean done = true;
         do {
             try {
@@ -58,13 +34,14 @@ public class FindPoliticians {
                     name = "";
                 }
             } catch (TwitterException ex) {
-                Logger.getLogger(FindPoliticians.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(PoliticiansLoader.class.getName()).log(Level.SEVERE, null, ex);
                 TimeUnit.MINUTES.sleep(3);
                 done = false;
             } catch (java.lang.IndexOutOfBoundsException e) {
                 name = "";
             }
         } while (!done);
+        
         return name;
     }
 
@@ -93,12 +70,14 @@ public class FindPoliticians {
                 }
             }
         });
+        
         return politiciansMatrix;
     }
 
     public static void main(String[] args) throws TwitterException, FileNotFoundException, IOException {
-        List<String[]> politicians = CSVUtils.readCSV();
+        String csvFile = "src/main/resources/politicians.csv";
+        List<String[]> politicians = CSVUtils.readCSV(csvFile, ";");
         politicians = fromMatrixNameToMatrixTwitterID(politicians);
-        CSVUtils.writeCSV(politicians);
+        CSVUtils.writeCSV(politicians, "src/main/resources/politicians_loaded.csv");
     }
 }

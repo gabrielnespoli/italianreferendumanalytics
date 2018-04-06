@@ -5,7 +5,7 @@
  */
 package Analysis;
 
-import Utils.ReadFile;
+import IO.ReadFile;
 import com.google.common.util.concurrent.AtomicDouble;
 import it.stilo.g.algo.ConnectedComponents;
 import it.stilo.g.algo.CoreDecomposition;

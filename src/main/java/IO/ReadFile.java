@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package Utils;
+package IO;
 // source: http://www.technical-recipes.com/2011/reading-text-files-into-string-arrays-in-java/
 
 import java.io.BufferedReader;
