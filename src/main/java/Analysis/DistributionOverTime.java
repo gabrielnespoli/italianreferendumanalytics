@@ -133,8 +133,8 @@ public class DistributionOverTime {
         } else {
             folderStream = "src/main/resources/sbn-data/stream";
             //folderStream = "/home/sergio/Escritorio/sbnData/sbn-data/stream";
-            filenameYes = "src/main/resources/politicians/yes.txt";
-            filenameNo = "src/main/resources/politicians/no.txt";
+            filenameYes = "src/main/resources/yes_politicians.txt";
+            filenameNo = "src/main/resources/no_politicians.txt";
         }
 
         //Check where the tweets are
