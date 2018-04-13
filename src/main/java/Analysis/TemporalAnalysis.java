@@ -60,7 +60,7 @@ public abstract class TemporalAnalysis {
     // add aditional terms to the default set of standard stop words
     static {
         STOPWORDS = CharArraySet.copy(Version.LUCENE_41, ItalianAnalyzer.getDefaultStopSet());
-
+        
         try {
             FileInputStream inputStream;
             InputStreamReader inputReader;
