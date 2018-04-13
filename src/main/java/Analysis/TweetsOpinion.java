@@ -113,7 +113,8 @@ public class TweetsOpinion {
         return data;
     }
 
-    private static void findSupporters(String filenamePoliticians, String filenameOutput) throws IOException, ParseException {
+    private static void findSupporters(String filenamePoliticians, String filenameOutput, String M) throws IOException, ParseException {
+                                        // politicians input, user <-> politician output, set of users M
         // Load the all tweets index and analyzer
         ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, STOPWORDS);
         IndexWriterConfig cfg = new IndexWriterConfig(Version.LUCENE_41, analyzer);
@@ -155,19 +156,25 @@ public class TweetsOpinion {
         
         // Save to file as <user> <polititian>
         listToTxt(filenameOutput, saveHits);
+        
         // Show the asked data
         Set uniqueUsers = new HashSet(users);
         System.out.println("Unique users: " + uniqueUsers.size());
         System.out.println("Total tweets: " + saveHits.size());
+        
+        // save the set M
+        List<String> uniqueUsersList = new ArrayList<String>();
+        uniqueUsersList.addAll(uniqueUsers);
+        listToTxt(M, uniqueUsersList);
     }
 
     public static void main(String[] args) throws IOException, JSONException, ParseException, java.text.ParseException {
         // Uncomment to create the inverted index of all tweets
         //createIndexAllTweets();
         System.out.println("#### YES");
-        findSupporters("src/main/resources/yes_politicians.txt", "src/main/resources/yes_users_mention_politicians.txt");
+        findSupporters("src/main/resources/yes_politicians.txt", "src/main/resources/yes_users_mention_politicians.txt", "src/main/resources/yes_M.txt");
         
         System.out.println("#### NO");
-        findSupporters("src/main/resources/no_politicians.txt", "src/main/resources/no_users_mention_politicians.txt");
+        findSupporters("src/main/resources/no_politicians.txt", "src/main/resources/no_users_mention_politicians.txt", "src/main/resources/no_M.txt");
     }
 }
