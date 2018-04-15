@@ -1,36 +1,17 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
-
-    Running this file will create the temporal distribution of tweets of the politicians
-    under src/main/resources/histogram*.txt
- */
 package Analysis;
 
 import IO.GzipReader;
+import IO.TxtUtils;
 import PreProcess.Parser;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import twitter4j.JSONException;
 import twitter4j.JSONObject;
 
-
 public class DistributionOverTime {
-
-    public static void listToTxt(String filePath, List<String> arr) throws IOException {
-        FileWriter writer = new FileWriter(filePath);
-        for (String str : arr) {
-            writer.write(str);
-            writer.write("\n");
-        }
-        writer.close();
-    }
 
     public static void createHistogram(List<List> doubleList, String filePath) throws IOException {
         List<String> finalList = new ArrayList<>();
@@ -41,7 +22,7 @@ public class DistributionOverTime {
         }
         System.out.print(finalList.size());
 
-        listToTxt(filePath, finalList);
+        TxtUtils.listToTxt(filePath, finalList);
     }
 
     public static File[] findFilesInDirectory(String directoryPath) {
@@ -49,35 +30,13 @@ public class DistributionOverTime {
         File folder = new File(directoryPath);
 
         File[] files = folder.listFiles();
-        /* 
-        for (File file : files) 
-        {
-            if (file.isDirectory())
-            {
-                System.out.println(file.getName());
-            }
-        }*/
         return files;
-    }
-
-    public static List<String> txtToArray(String filename) throws IOException {
-        // read the file and return an array that each entry is a politician twitter name
-        BufferedReader abc = new BufferedReader(new FileReader(filename));
-        List<String> data = new ArrayList<String>();
-        String s;
-        while ((s = abc.readLine()) != null) {
-            data.add(s);
-            //System.out.println(s);
-        }
-        abc.close();
-        //data.forEach(System.out::println);
-        return data;
     }
 
     public static List<List<String>> getHistogram(String filenameTweets, String filenameYes, String filenameNo) throws IOException, JSONException {
         // list of candidates
-        List<String> listYes = txtToArray(filenameYes);
-        List<String> listNo = txtToArray(filenameNo);
+        List<String> listYes = TxtUtils.txtToArray(filenameYes);
+        List<String> listNo = TxtUtils.txtToArray(filenameNo);
         List<List<String>> nestedList = new ArrayList<>();
 
         BufferedReader br = GzipReader.getBufferedReaderGzFile(filenameTweets);
@@ -132,7 +91,6 @@ public class DistributionOverTime {
 
         } else {
             folderStream = "src/main/resources/sbn-data/stream";
-            //folderStream = "/home/sergio/Escritorio/sbnData/sbn-data/stream";
             filenameYes = "src/main/resources/yes_politicians.txt";
             filenameNo = "src/main/resources/no_politicians.txt";
         }
@@ -164,9 +122,6 @@ public class DistributionOverTime {
 
         }
 
-        //System.out.print(histogramYes);
-        //System.out.println("");
-        //System.out.print(histogramNo);
         System.out.println("The yes to referendum has this number of tweets");
         createHistogram(histogramYes, filePathYes);
         System.out.println("\n\nThe no to referendum has this number of tweets");

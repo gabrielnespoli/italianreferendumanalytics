@@ -1,6 +1,7 @@
 import Analysis.CoocurrenceGraph;
 import Analysis.KcoreAndCC;
 import Analysis.TemporalAnalysis;
+import PreProcess.IndexBuilder;
 import java.io.IOException;
 import java.text.ParseException;
 import twitter4j.JSONException;
@@ -11,7 +12,12 @@ public class Main {
         boolean plot = true;
         double threshold = 0.07;
         
-        TemporalAnalysis.clusterTopNTerms(useCache, 1000, 12, 20);
+        if (!useCache) {
+            IndexBuilder.createIndexAllTweets();
+            IndexBuilder.createYesNoIndex();
+        }
+        
+        TemporalAnalysis.clusterTopNTerms(1000, 12, 20);
         CoocurrenceGraph.generateCoocurrenceGraph();
         KcoreAndCC.extractKCoreAndConnectedComponent(threshold);
         
