@@ -26,6 +26,12 @@ import static org.apache.lucene.util.Version.LUCENE_41;
 import twitter4j.JSONException;
 
 public class TweetsOpinion {
+    
+    public static int showProgress(int counter, int maxLen){
+        float p = (float) counter/maxLen;
+        System.out.println(p * 100.0 + " % done");
+        return counter + 1;
+    }
 
     private static void findSupporters(String filenamePoliticians, String filenameOutput, String M) throws IOException, ParseException {
         // politicians input, user <-> politician output, set of users M
@@ -42,32 +48,36 @@ public class TweetsOpinion {
         List<String> listPoliticians = TxtUtils.txtToList(filenamePoliticians);
 
         // iterate over politicians to find them in the tweets
-        String politician = listPoliticians.get(1);
-        Query q = parser.parse("+ " + politician);
-
-        // Find tweets. I put a very high threshold so i find all of them
-        TopDocs top = searcher.search(q, 10000000);
-        ScoreDoc[] hits = top.scoreDocs;
-
-        // Go on each hit
-        Document doc = null;
-
         // Save the results using this list
         List<String> saveHits = new ArrayList<>();
-        String s = "";
-
         //Unique users to show statistics
         List<String> users = new ArrayList<>();
+        
+        int counter = 0;
 
-        // go on each hit
-        for (ScoreDoc entry : hits) {
-            doc = searcher.doc(entry.doc);
-            //System.out.println("field1: " + doc.get("user"));
-            s = doc.get("user") + " " + politician;
-            saveHits.add(s);
-            users.add(doc.get("user"));
+        for (String politician : listPoliticians) {
+            counter = showProgress(counter, listPoliticians.size());
+
+            Query q = parser.parse("+ " + politician);
+
+            // Find tweets. I put a very high threshold so i find all of them
+            TopDocs top = searcher.search(q, 10000000);
+            ScoreDoc[] hits = top.scoreDocs;
+
+            // Go on each hit
+            Document doc = null;
+
+            String s = "";
+
+            // go on each hit
+            for (ScoreDoc entry : hits) {
+                doc = searcher.doc(entry.doc);
+                //System.out.println("field1: " + doc.get("user"));
+                s = doc.get("user") + " " + politician;
+                saveHits.add(s);
+                users.add(doc.get("user"));
+            }
         }
-
         // Save to file as <user> <polititian>
         TxtUtils.listToTxt(filenameOutput, saveHits);
 
