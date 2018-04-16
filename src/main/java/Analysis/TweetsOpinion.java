@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package Analysis;
 
 import static Analysis.TemporalAnalysis.INDEX_DIRECTORY;
@@ -44,7 +39,7 @@ public class TweetsOpinion {
         QueryParser parser = new QueryParser(LUCENE_41, "term", analyzer);
 
         // Get the list of politicians
-        List<String> listPoliticians = TxtUtils.txtToArray(filenamePoliticians);
+        List<String> listPoliticians = TxtUtils.txtToList(filenamePoliticians);
 
         // iterate over politicians to find them in the tweets
         String politician = listPoliticians.get(1);

@@ -389,7 +389,7 @@ public abstract class TemporalAnalysis {
             indexDirectory = INDEX_DIRECTORY + prefix + "_index";
             for (String clusterType : clusterTypes) {
                 clusterDirectory = RESOURCES_DIRECTORY + prefix + "_" + clusterType + ".txt";
-                clusters = KcoreAndCC.loadClusters(clusterDirectory);
+                clusters = GraphAnalysis.loadClusters(clusterDirectory);
 
                 // iterate through all the clusters plotting the time series of all terms in the cluster
                 for (Integer clusterID : clusters.keySet()) {

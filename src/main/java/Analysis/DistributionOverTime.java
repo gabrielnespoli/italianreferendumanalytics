@@ -35,8 +35,8 @@ public class DistributionOverTime {
 
     public static List<List<String>> getHistogram(String filenameTweets, String filenameYes, String filenameNo) throws IOException, JSONException {
         // list of candidates
-        List<String> listYes = TxtUtils.txtToArray(filenameYes);
-        List<String> listNo = TxtUtils.txtToArray(filenameNo);
+        List<String> listYes = TxtUtils.txtToList(filenameYes);
+        List<String> listNo = TxtUtils.txtToList(filenameNo);
         List<List<String>> nestedList = new ArrayList<>();
 
         BufferedReader br = GzipReader.getBufferedReaderGzFile(filenameTweets);

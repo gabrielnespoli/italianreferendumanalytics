@@ -1,15 +1,12 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package Analysis;
 
 import IO.ReadFile;
+import IO.TxtUtils;
 import com.google.common.util.concurrent.AtomicDouble;
 import it.stilo.g.algo.ConnectedComponents;
 import it.stilo.g.algo.CoreDecomposition;
 import it.stilo.g.algo.GraphInfo;
+import it.stilo.g.algo.HubnessAuthority;
 import it.stilo.g.algo.SubGraphByEdgesWeight;
 import it.stilo.g.structures.Core;
 import it.stilo.g.util.NodesMapper;
@@ -18,7 +15,9 @@ import java.util.Arrays;
 import java.util.List;
 import it.stilo.g.algo.SubGraph;
 import it.stilo.g.algo.UnionDisjoint;
+import it.stilo.g.structures.DoubleValues;
 import it.stilo.g.structures.WeightedUndirectedGraph;
+import it.stilo.g.util.GraphReader;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileWriter;
@@ -32,7 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import org.apache.lucene.queryparser.classic.ParseException;
 
-public class KcoreAndCC {
+public class GraphAnalysis {
 
     public static final String RESOURCES_LOCATION = "src/main/resources/";
 
@@ -52,10 +51,8 @@ public class KcoreAndCC {
     }
 
     private static List<Integer> getNumberNodes(String graph, int c) throws IOException {
-        //String graph = "src/main/resources/yes_graph.txt";
         ReadFile rf = new ReadFile();
         String[] lines = rf.readLines(graph);
-        //WeightedUndirectedGraph[] gArray = new WeightedUndirectedGraph[c];
         List<Integer> numberNodes = new ArrayList<>();
         int n = lines.length;
         for (int cIter = 0; cIter < c; cIter++) {
@@ -75,7 +72,6 @@ public class KcoreAndCC {
 
     private static WeightedUndirectedGraph addNodesGraph(WeightedUndirectedGraph g, int k, String graph, NodesMapper<String> mapper) throws IOException {
         // add the nodes from the a file created with coocurrencegraph.java, and returns the graph
-        //String graph = "src/main/resources/yes_graph.txt";
         ReadFile rf = new ReadFile();
         String[] lines = rf.readLines(graph);
 
@@ -147,9 +143,7 @@ public class KcoreAndCC {
         }
         System.out.println("CC");
         Set<Set<Integer>> comps = ConnectedComponents.rootedConnectedComponents(g, all, 2);
-        //System.out.println(comps.size());
 
-        int counter = 0;
         int m = 0;
         Set<Integer> max_set = null;
         // get largest component
@@ -158,7 +152,6 @@ public class KcoreAndCC {
                 max_set = innerSet;
                 m = innerSet.size();
             }
-            counter++;
         }
 
         int[] subnodes = new int[max_set.size()];
@@ -284,4 +277,31 @@ public class KcoreAndCC {
 
         return hmClusterIDTerms;
     }
+
+    public static WeightedUndirectedGraph readGraph(int graphSize, String filename) throws IOException {
+        WeightedUndirectedGraph g = new WeightedUndirectedGraph(graphSize + 1);
+        GraphReader.readGraph(g, RESOURCES_LOCATION + filename, true);
+        return g;
+    }
+
+    public static void extractAuthoritativeNodes(WeightedUndirectedGraph g) throws IOException {
+        //yes_user_mention_politician
+
+        List<String> yesUserMentionPolitician = TxtUtils.txtToList(RESOURCES_LOCATION + "yes_user_mention_politician.txt");
+
+        int worker = (int) (Runtime.getRuntime().availableProcessors());
+        ArrayList<ArrayList<DoubleValues>> authorities = HubnessAuthority.compute(g, 0.00001, worker);
+
+        for (int i = 0; i < authorities.size(); i++) {
+            ArrayList<DoubleValues> score = authorities.get(i);
+            String x = "";
+            if (i == 0) {
+                x = "Auth ";
+            } else {
+                x = "Hub ";
+            }
+
+        }
+    }
+
 }

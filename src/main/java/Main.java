@@ -1,7 +1,8 @@
 import Analysis.CoocurrenceGraph;
-import Analysis.KcoreAndCC;
+import Analysis.GraphAnalysis;
 import Analysis.TemporalAnalysis;
 import PreProcess.IndexBuilder;
+import it.stilo.g.structures.WeightedUndirectedGraph;
 import java.io.IOException;
 import java.text.ParseException;
 import twitter4j.JSONException;
@@ -19,13 +20,18 @@ public class Main {
         
         TemporalAnalysis.clusterTopNTerms(1000, 12, 20);
         CoocurrenceGraph.generateCoocurrenceGraph();
-        KcoreAndCC.extractKCoreAndConnectedComponent(threshold);
+        GraphAnalysis.extractKCoreAndConnectedComponent(threshold);
         
         String[] prefixYesNo = {"yes", "no"};
         String[] clusterTypes = {"kcore", "largestcc"};
         if (plot == true) {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
+        
+        // do the authorities and hubs analyses
+        int graphSize = 16815933;
+        String graphFilename = "Official_SBN-ITA-2016-Net";
+        WeightedUndirectedGraph g = GraphAnalysis.readGraph(graphSize, graphFilename);
         
     }
 }

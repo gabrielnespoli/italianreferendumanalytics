@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package Analysis;
 
 import IO.ReadFile;
@@ -26,13 +21,14 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 import static org.apache.lucene.util.Version.LUCENE_41;
 
-/**
- *
- * @author sergio
- */
-public class CoocurrenceGraph {
+public abstract class CoocurrenceGraph {
 
-    public static void Write(List<String> s1, List<String> s2, List<Integer> w, List<Integer> c, String fn) {
+    public static final String RESOURCES_DIRECTORY = "src/main/resources/";
+    public static final String OUTPUT_GRAPH_DIRECTORY = "src/main/resources/";
+    public static final String INDEX_DIRECTORY = "src/main/resources/";
+    public static final String CLUSTER_DIRECTORY = "src/main/resources/";
+
+    public static void writeCoocurrenceGraph(List<String> s1, List<String> s2, List<Integer> w, List<Integer> c, String fn) {
 
         try {
             FileWriter fr = new FileWriter(fn);
@@ -81,17 +77,12 @@ public class CoocurrenceGraph {
         ReadFile rf = new ReadFile();
 
         String[] lines = rf.readLines(cluster);
-        /*
-        for (String line : lines) {
-            String[] parts = line.split(" ");
-            System.out.println(line);
-        }*/
 
         for (int i = 0; i < lines.length; i++) {
             System.out.println((float) i / lines.length * 100 + "%");
             String[] partsi = lines[i].split(" ");
             int resulti = Integer.parseInt(partsi[1]);
-            for (int j = i ; j < lines.length; j++) {
+            for (int j = i; j < lines.length; j++) {
                 String[] partsj = lines[j].split(" ");
                 int resultj = Integer.parseInt(partsj[1]);
                 if (resultj == resulti && !partsi[0].equals(partsj[0])) {
@@ -108,24 +99,21 @@ public class CoocurrenceGraph {
             }
         }
 
-        Write(col1, col2, weight, c, outputFile);
+        writeCoocurrenceGraph(col1, col2, weight, c, outputFile);
         System.out.println("Done");
 
     }
 
     public static void generateCoocurrenceGraph() throws IOException, ParseException, Exception {
-        String clusterYes = "src/main/resources/yesClusters.txt";
-        String clusterNo = "src/main/resources/noClusters.txt";
+        String clusterYes = CLUSTER_DIRECTORY + "yesClusters.txt";
+        String clusterNo = CLUSTER_DIRECTORY + "noClusters.txt";
 
         // Load the index
-        // Yes tweets
-        String indexFolderYes = "src/main/resources/yes_index/";
-        // No tweets
-        String indexFolderNo = "src/main/resources/no_index/";
+        String indexFolderYes = INDEX_DIRECTORY + "yes_index/";  // Yes tweets
+        String indexFolderNo = INDEX_DIRECTORY + "no_index/";  // No tweets
 
-        generateGraph(clusterYes, indexFolderYes, "src/main/resources/yes_graph.txt");
-        generateGraph(clusterNo, indexFolderNo, "src/main/resources/no_graph.txt");
-
+        generateGraph(clusterYes, indexFolderYes, OUTPUT_GRAPH_DIRECTORY + "yes_graph.txt");
+        generateGraph(clusterNo, indexFolderNo, OUTPUT_GRAPH_DIRECTORY + "no_graph.txt");
     }
 
 }

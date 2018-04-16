@@ -1,14 +1,21 @@
 package Utils;
 
+import PreProcess.PoliticiansLoader;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import twitter4j.Query;
 import twitter4j.QueryResult;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
 import twitter4j.TwitterFactory;
+import twitter4j.User;
 import twitter4j.conf.ConfigurationBuilder;
 
 public abstract class TwitterUtils {
 
+    public static final int FOLLOWERSTHRESHOLD = 5000;
+    
     public static twitter4j.Twitter getTwitter() {
         ConfigurationBuilder cfg = new ConfigurationBuilder();
         cfg.setOAuthAccessToken("804265252221308928-QMQRe5XZPRSBmXqZTYD1ESzOoiNDY7y");
@@ -30,4 +37,29 @@ public abstract class TwitterUtils {
         }
         return result;
     }
+    
+    public static String fromNameToTwitterID(String name) throws InterruptedException {
+
+        Twitter twitter = TwitterUtils.getTwitter();
+        boolean done = true;
+        do {
+            try {
+                User user = twitter.searchUsers(name, 0).get(0);
+                if (user.getFollowersCount() >= FOLLOWERSTHRESHOLD) {
+                    name = "@" + user.getScreenName();
+                } else {
+                    name = "";
+                }
+            } catch (TwitterException ex) {
+                Logger.getLogger(PoliticiansLoader.class.getName()).log(Level.SEVERE, null, ex);
+                TimeUnit.MINUTES.sleep(3);
+                done = false;
+            } catch (java.lang.IndexOutOfBoundsException e) {
+                name = "";
+            }
+        } while (!done);
+        
+        return name;
+    }
+    
 }

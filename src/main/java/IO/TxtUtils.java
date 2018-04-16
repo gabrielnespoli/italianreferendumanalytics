@@ -9,15 +9,15 @@ import java.util.List;
 
 public abstract class TxtUtils {
 
-    public static List<String> txtToArray(String filename) throws IOException {
+    public static List<String> txtToList(String filename) throws IOException {
         // read the file and return an array that each entry is a politician twitter name
-        BufferedReader abc = new BufferedReader(new FileReader(filename));
+        BufferedReader br = new BufferedReader(new FileReader(filename));
         List<String> data = new ArrayList<>();
         String s;
-        while ((s = abc.readLine()) != null) {
+        while ((s = br.readLine()) != null) {
             data.add(s);
         }
-        abc.close();
+        br.close();
         return data;
     }
     
