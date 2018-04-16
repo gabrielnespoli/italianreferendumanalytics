@@ -1,6 +1,6 @@
-package Analysis;
+package analysis;
 
-import IO.ReadFile;
+import io.ReadFile;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;

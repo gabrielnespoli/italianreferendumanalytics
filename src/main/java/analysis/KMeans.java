@@ -1,6 +1,6 @@
-package Analysis;
+package analysis;
 
-import Utils.CharUtils;
+import utils.CharUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;

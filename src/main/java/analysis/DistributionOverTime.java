@@ -1,8 +1,8 @@
-package Analysis;
+package analysis;
 
-import IO.GzipReader;
-import IO.TxtUtils;
-import PreProcess.Parser;
+import io.GzipReader;
+import io.TxtUtils;
+import preprocess.Parser;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;

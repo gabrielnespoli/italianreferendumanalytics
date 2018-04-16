@@ -1,4 +1,4 @@
-package Analysis;
+package analysis;
 
 import net.seninp.jmotif.sax.SAXException;
 import net.seninp.jmotif.sax.SAXProcessor;

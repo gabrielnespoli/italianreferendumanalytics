@@ -1,14 +1,12 @@
-package Analysis;
+package analysis;
 
-import Utils.TimeSeriesPlotter;
-import java.io.BufferedReader;
+import index.IndexBuilder;
+import static index.IndexBuilder.INDEX_DIRECTORY;
+import utils.TimeSeriesPlotter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -20,8 +18,6 @@ import net.seninp.jmotif.sax.SAXException;
 import org.apache.lucene.analysis.it.ItalianAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.LongField;
-import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -34,7 +30,6 @@ import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
 import net.seninp.jmotif.sax.alphabet.NormalAlphabet;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
-import org.apache.lucene.analysis.util.CharArraySet;
 
 public abstract class TemporalAnalysis {
 
@@ -46,52 +41,9 @@ public abstract class TemporalAnalysis {
     public static final File[] SUB_DIRECTORIES_TEST = new File(STREAM_FILES_LOCATION_TEST).listFiles((File file) -> file.isDirectory());
 
     public static final String RESOURCES_DIRECTORY = "src/main/resources/";
-    public static final String INDEX_DIRECTORY = "src/main/resources/";
-    public static final String STOPWORDS_FILENAME = "stopwords.txt";
-    public static final CharArraySet STOPWORDS;
-
-    // add aditional terms to the default set of standard stop words
-    static {
-        STOPWORDS = CharArraySet.copy(Version.LUCENE_41, ItalianAnalyzer.getDefaultStopSet());
-
-        try {
-            FileInputStream inputStream;
-            InputStreamReader inputReader;
-            BufferedReader br;
-
-            inputStream = new FileInputStream(RESOURCES_DIRECTORY + STOPWORDS_FILENAME);
-            inputReader = new InputStreamReader(inputStream);
-            br = new BufferedReader(inputReader);
-
-            String stopword;
-            ArrayList<String> stopwords = new ArrayList();
-
-            while ((stopword = br.readLine()) != null) {
-                stopwords.add(stopword);
-            }
-
-            STOPWORDS.addAll(stopwords);
-
-        } catch (IOException ex) {
-            System.out.println(ex.getMessage());
-        }
-    }
-
-    public static Document toLuceneDocument(String tweet, String user, String rtUser, String dateTimeStr) throws IOException, java.text.ParseException {
-        SimpleDateFormat f = new SimpleDateFormat("dd-MMMM-yyyy HH:mm:ss", Locale.US); //define the date format
-        Document document = new Document();
-        document.add(new TextField("term", tweet, Field.Store.YES));
-        document.add(new StringField("user", user, Field.Store.YES));
-        document.add(new StringField("rt_user", rtUser, Field.Store.YES));
-
-        String[] dateFields = dateTimeStr.split(" ");
-        dateTimeStr = dateFields[2] + "-" + dateFields[1] + "-" + dateFields[5] + " " + dateFields[3];
-        document.add(new LongField("created_at", (f.parse(dateTimeStr)).getTime(), Field.Store.YES)); //convert the date to Long
-        return document;
-    }
-
+    
     private static long[] getMinMaxDates() throws IOException {
-        File indexFile = new File(INDEX_DIRECTORY + "yes_index");
+        File indexFile = new File(IndexBuilder.INDEX_DIRECTORY + "yes_index");
         FSDirectory indexFSDirectory = FSDirectory.open(indexFile);
         IndexReader indexReader = DirectoryReader.open(indexFSDirectory);
         Document doc;
@@ -162,7 +114,7 @@ public abstract class TemporalAnalysis {
      */
     private static LinkedHashSet<String> getTokens(String tweet) throws IOException, Exception {
         RAMDirectory ramDir = new RAMDirectory();
-        ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, STOPWORDS);
+        ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, IndexBuilder.STOPWORDS);
         IndexWriterConfig conf = new IndexWriterConfig(Version.LUCENE_41, analyzer);
         IndexWriter ramIW = new IndexWriter(ramDir, conf);
         Document doc = new Document();

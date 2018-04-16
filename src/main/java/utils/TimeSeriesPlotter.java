@@ -1,4 +1,4 @@
-package Utils;
+package utils;
 
 import java.awt.BasicStroke;
 import java.awt.Color;

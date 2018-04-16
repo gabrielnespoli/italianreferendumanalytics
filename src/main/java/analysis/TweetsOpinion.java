@@ -1,10 +1,9 @@
-package Analysis;
+package analysis;
 
-import static Analysis.TemporalAnalysis.INDEX_DIRECTORY;
-import static Analysis.TemporalAnalysis.STOPWORDS;
 import java.io.File;
 import java.io.IOException;
-import IO.TxtUtils;
+import io.TxtUtils;
+import index.IndexBuilder;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -36,10 +35,10 @@ public class TweetsOpinion {
     private static void findSupporters(String filenamePoliticians, String filenameOutput, String M) throws IOException, ParseException {
         // politicians input, user <-> politician output, set of users M
         // Load the all tweets index and analyzer
-        ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, STOPWORDS);
+        ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, IndexBuilder.STOPWORDS);
         IndexWriterConfig cfg = new IndexWriterConfig(Version.LUCENE_41, analyzer);
 
-        File directoryIndex = new File(INDEX_DIRECTORY + "all_tweets_index/");
+        File directoryIndex = new File(IndexBuilder.INDEX_DIRECTORY + "all_tweets_index/");
         IndexReader ir = DirectoryReader.open(FSDirectory.open(directoryIndex));
         IndexSearcher searcher = new IndexSearcher(ir);
         QueryParser parser = new QueryParser(LUCENE_41, "term", analyzer);

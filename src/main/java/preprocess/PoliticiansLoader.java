@@ -1,7 +1,7 @@
-package PreProcess;
+package preprocess;
 
-import IO.CSVUtils;
-import Utils.TwitterUtils;
+import io.CSVUtils;
+import utils.TwitterUtils;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
@@ -22,11 +22,11 @@ public abstract class PoliticiansLoader {
 
                 try {
                     if (!politicianYes.startsWith("@")) {
-                        politicianYes = TwitterUtils.fromNameToTwitterID(politicianYes);
+                        politicianYes = TwitterUtils.fromNameToTwitterScreenName(politicianYes);
                         politiciansLine[0] = politicianYes;
                     }
                     if (!politicianNo.startsWith("@") && !"".equals(politicianNo)) {
-                        politicianNo = TwitterUtils.fromNameToTwitterID(politicianNo);
+                        politicianNo = TwitterUtils.fromNameToTwitterScreenName(politicianNo);
                         politiciansLine[1] = politicianNo;
                     }
                 } catch (InterruptedException ie) {

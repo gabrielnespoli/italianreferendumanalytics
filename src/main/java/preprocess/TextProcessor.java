@@ -1,4 +1,4 @@
-package PreProcess;
+package preprocess;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;

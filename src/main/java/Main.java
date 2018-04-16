@@ -1,7 +1,7 @@
-import Analysis.CoocurrenceGraph;
-import Analysis.GraphAnalysis;
-import Analysis.TemporalAnalysis;
-import PreProcess.IndexBuilder;
+import analysis.CoocurrenceGraph;
+import analysis.GraphAnalysis;
+import analysis.TemporalAnalysis;
+import index.IndexBuilder;
 import it.stilo.g.structures.WeightedUndirectedGraph;
 import java.io.IOException;
 import java.text.ParseException;

@@ -1,17 +1,26 @@
-package PreProcess;
+package index;
 
-import static Analysis.TemporalAnalysis.STOPWORDS;
-import static Analysis.TemporalAnalysis.toLuceneDocument;
-import IO.CSVUtils;
-import IO.GzipReader;
+import io.CSVUtils;
+import io.GzipReader;
+import preprocess.Parser;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import org.apache.lucene.analysis.it.ItalianAnalyzer;
+import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.LongField;
+import org.apache.lucene.document.StringField;
+import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -28,6 +37,48 @@ public abstract class IndexBuilder {
     public static final String RESOURCES_DIRECTORY = "src/main/resources/";
     public static final String INDEX_DIRECTORY = "src/main/resources/";
     public static final String STOPWORDS_FILENAME = "stopwords.txt";
+
+    public static final CharArraySet STOPWORDS;
+
+    public static Document toLuceneDocument(String tweet, String user, String rtUser, String dateTimeStr) throws IOException, java.text.ParseException {
+        SimpleDateFormat f = new SimpleDateFormat("dd-MMMM-yyyy HH:mm:ss", Locale.US); //define the date format
+        Document document = new Document();
+        document.add(new TextField("term", tweet, Field.Store.YES));
+        document.add(new StringField("user", user, Field.Store.YES));
+        document.add(new StringField("rt_user", rtUser, Field.Store.YES));
+
+        String[] dateFields = dateTimeStr.split(" ");
+        dateTimeStr = dateFields[2] + "-" + dateFields[1] + "-" + dateFields[5] + " " + dateFields[3];
+        document.add(new LongField("created_at", (f.parse(dateTimeStr)).getTime(), Field.Store.YES)); //convert the date to Long
+        return document;
+    }
+
+    // add aditional terms to the default set of standard stop words
+    static {
+        STOPWORDS = CharArraySet.copy(Version.LUCENE_41, ItalianAnalyzer.getDefaultStopSet());
+
+        try {
+            FileInputStream inputStream;
+            InputStreamReader inputReader;
+            BufferedReader br;
+
+            inputStream = new FileInputStream(RESOURCES_DIRECTORY + STOPWORDS_FILENAME);
+            inputReader = new InputStreamReader(inputStream);
+            br = new BufferedReader(inputReader);
+
+            String stopword;
+            ArrayList<String> stopwords = new ArrayList();
+
+            while ((stopword = br.readLine()) != null) {
+                stopwords.add(stopword);
+            }
+
+            STOPWORDS.addAll(stopwords);
+
+        } catch (IOException ex) {
+            System.out.println(ex.getMessage());
+        }
+    }
 
     public static HashMap<String, LinkedHashSet<String>> loadPoliticiansNames() {
         LinkedHashSet<String> yes_supporters = new LinkedHashSet<>();

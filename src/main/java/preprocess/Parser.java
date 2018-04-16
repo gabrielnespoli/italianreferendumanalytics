@@ -1,4 +1,4 @@
-package PreProcess;
+package preprocess;
 
 import twitter4j.JSONException;
 import twitter4j.JSONObject;

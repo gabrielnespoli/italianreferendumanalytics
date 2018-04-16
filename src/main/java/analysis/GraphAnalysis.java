@@ -1,7 +1,7 @@
-package Analysis;
+package analysis;
 
-import IO.ReadFile;
-import IO.TxtUtils;
+import io.ReadFile;
+import io.TxtUtils;
 import com.google.common.util.concurrent.AtomicDouble;
 import it.stilo.g.algo.ConnectedComponents;
 import it.stilo.g.algo.CoreDecomposition;
@@ -288,6 +288,10 @@ public class GraphAnalysis {
         //yes_user_mention_politician
 
         List<String> yesUserMentionPolitician = TxtUtils.txtToList(RESOURCES_LOCATION + "yes_user_mention_politician.txt");
+        for (String row : yesUserMentionPolitician) {
+            String user = row.split(" ")[0];  // get the user screen name
+
+        }
 
         int worker = (int) (Runtime.getRuntime().availableProcessors());
         ArrayList<ArrayList<DoubleValues>> authorities = HubnessAuthority.compute(g, 0.00001, worker);
