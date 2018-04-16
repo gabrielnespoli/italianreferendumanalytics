@@ -42,7 +42,7 @@ public abstract class TemporalAnalysis {
     public static final File[] SUB_DIRECTORIES = new File(STREAM_FILES_LOCATION).listFiles((File file) -> file.isDirectory());
 
     // Files for testing
-    public static final String STREAM_FILES_LOCATION_TEST = "/home/sergio/Escritorio/sbnData/sbn-data/stream";
+    public static final String STREAM_FILES_LOCATION_TEST = "src/main/resources/sbn-data/stream/";
     public static final File[] SUB_DIRECTORIES_TEST = new File(STREAM_FILES_LOCATION_TEST).listFiles((File file) -> file.isDirectory());
 
     public static final String RESOURCES_DIRECTORY = "src/main/resources/";
