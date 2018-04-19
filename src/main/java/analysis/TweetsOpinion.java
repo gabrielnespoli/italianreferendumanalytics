@@ -78,7 +78,7 @@ public class TweetsOpinion {
             }
         }
         // Save to file as <user> <polititian>
-        TxtUtils.listToTxt(filenameOutput, saveHits);
+        TxtUtils.iterableToTxt(filenameOutput, saveHits);
 
         // Show the asked data
         Set uniqueUsers = new HashSet(users);
@@ -88,7 +88,7 @@ public class TweetsOpinion {
         // save the set M
         List<String> uniqueUsersList = new ArrayList<>();
         uniqueUsersList.addAll(uniqueUsers);
-        TxtUtils.listToTxt(M, uniqueUsersList);
+        TxtUtils.iterableToTxt(M, uniqueUsersList);
     }
 
     public static void main(String[] args) throws IOException, JSONException, ParseException, java.text.ParseException {

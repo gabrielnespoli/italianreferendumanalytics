@@ -2,3 +2,6 @@
 /target/
 /src/main/resources/sbn-data/
 /src/main/resources/Official_SBN-ITA-2016-Net.gz
+/src/main/resources/2Official_SBN-ITA-2016-Net.gz
+/src/main/resources/data.gz
+/src/main/resources/all_tweets_index/

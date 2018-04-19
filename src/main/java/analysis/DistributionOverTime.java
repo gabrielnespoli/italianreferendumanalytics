@@ -22,7 +22,7 @@ public class DistributionOverTime {
         }
         System.out.print(finalList.size());
 
-        TxtUtils.listToTxt(filePath, finalList);
+        TxtUtils.iterableToTxt(filePath, finalList);
     }
 
     public static File[] findFilesInDirectory(String directoryPath) {

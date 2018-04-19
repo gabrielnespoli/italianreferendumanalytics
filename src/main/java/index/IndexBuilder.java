@@ -40,19 +40,6 @@ public abstract class IndexBuilder {
 
     public static final CharArraySet STOPWORDS;
 
-    public static Document toLuceneDocument(String tweet, String user, String rtUser, String dateTimeStr) throws IOException, java.text.ParseException {
-        SimpleDateFormat f = new SimpleDateFormat("dd-MMMM-yyyy HH:mm:ss", Locale.US); //define the date format
-        Document document = new Document();
-        document.add(new TextField("term", tweet, Field.Store.YES));
-        document.add(new StringField("user", user, Field.Store.YES));
-        document.add(new StringField("rt_user", rtUser, Field.Store.YES));
-
-        String[] dateFields = dateTimeStr.split(" ");
-        dateTimeStr = dateFields[2] + "-" + dateFields[1] + "-" + dateFields[5] + " " + dateFields[3];
-        document.add(new LongField("created_at", (f.parse(dateTimeStr)).getTime(), Field.Store.YES)); //convert the date to Long
-        return document;
-    }
-
     // add aditional terms to the default set of standard stop words
     static {
         STOPWORDS = CharArraySet.copy(Version.LUCENE_41, ItalianAnalyzer.getDefaultStopSet());
@@ -78,6 +65,21 @@ public abstract class IndexBuilder {
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
         }
+    }
+
+    public static Document toLuceneDocument(String tweet, String user, long id, String rtUser, long rtId, String dateTimeStr) throws IOException, java.text.ParseException {
+        SimpleDateFormat f = new SimpleDateFormat("dd-MMMM-yyyy HH:mm:ss", Locale.US); //define the date format
+        Document document = new Document();
+        document.add(new TextField("term", tweet, Field.Store.YES));
+        document.add(new StringField("user", user, Field.Store.YES));
+        document.add(new LongField("id", id, Field.Store.YES));
+        document.add(new StringField("rt_user", rtUser, Field.Store.YES));
+        document.add(new LongField("rt_id", rtId, Field.Store.YES));
+
+        String[] dateFields = dateTimeStr.split(" ");
+        dateTimeStr = dateFields[2] + "-" + dateFields[1] + "-" + dateFields[5] + " " + dateFields[3];
+        document.add(new LongField("created_at", (f.parse(dateTimeStr)).getTime(), Field.Store.YES)); //convert the date to Long
+        return document;
     }
 
     public static HashMap<String, LinkedHashSet<String>> loadPoliticiansNames() {
@@ -133,12 +135,16 @@ public abstract class IndexBuilder {
 
                     String user = (String) ((JSONObject) json.get("user")).get("screen_name");
                     String rtUser = "";
+                    long id = Long.parseLong((String) ((JSONObject) json.get("user")).get("id_str"));
+                    long rtId = new Long(0);
+
                     if (!json.isNull("in_reply_to_screen_name")) {
                         rtUser = (String) json.get("in_reply_to_screen_name");
+                        rtId = Long.parseLong((String) json.get("in_reply_to_user_id_str"));
                     }
 
                     tweet = (String) json.get("text");
-                    document = toLuceneDocument(tweet, user, rtUser, (String) json.get("created_at")); //create the Lucene Document
+                    document = toLuceneDocument(tweet, user, id, rtUser, rtId, (String) json.get("created_at")); //create the Lucene Document
                     IndexWriter.addDocument(document); // add the document to the index
 
                 }
@@ -179,18 +185,22 @@ public abstract class IndexBuilder {
 
                     String user = (String) ((JSONObject) json.get("user")).get("screen_name");
                     String rtUser = "";
+                    long id = Long.parseLong((String) ((JSONObject) json.get("user")).get("id_str"));
+                    long rtId = new Long(0);
+
                     if (!json.isNull("in_reply_to_screen_name")) {
                         rtUser = (String) json.get("in_reply_to_screen_name");
+                        rtId = Long.parseLong((String) json.get("in_reply_to_user_id_str"));
                     }
 
                     //just accept for the analysis the tweets from the politicians
                     if (politicians.get("yes").contains(user) || politicians.get("yes").contains(rtUser)) {
                         tweet = (String) json.get("text");
-                        document = toLuceneDocument(tweet, user, rtUser, (String) json.get("created_at")); //create the Lucene Document
+                        document = toLuceneDocument(tweet, user, id, rtUser, rtId, (String) json.get("created_at")); //create the Lucene Document
                         yesIndexWriter.addDocument(document); // add the document to the index
                     } else if (politicians.get("no").contains(user) || politicians.get("no").contains(rtUser)) {
                         tweet = (String) json.get("text");
-                        document = toLuceneDocument(tweet, user, rtUser, (String) json.get("created_at")); //create the Lucene Document
+                        document = toLuceneDocument(tweet, user, id, rtUser, rtId, (String) json.get("created_at")); //create the Lucene Document
                         noIndexWriter.addDocument(document); // add the document to the index
                     }
                 }

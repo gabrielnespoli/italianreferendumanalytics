@@ -1,8 +1,12 @@
 package analysis;
 
+import com.google.common.primitives.Ints;
 import io.ReadFile;
 import io.TxtUtils;
 import com.google.common.util.concurrent.AtomicDouble;
+import gnu.trove.iterator.TLongIntIterator;
+import gnu.trove.map.TIntLongMap;
+import index.IndexSearcher;
 import it.stilo.g.algo.ConnectedComponents;
 import it.stilo.g.algo.CoreDecomposition;
 import it.stilo.g.algo.GraphInfo;
@@ -11,29 +15,32 @@ import it.stilo.g.algo.SubGraphByEdgesWeight;
 import it.stilo.g.structures.Core;
 import it.stilo.g.util.NodesMapper;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import it.stilo.g.algo.SubGraph;
 import it.stilo.g.algo.UnionDisjoint;
 import it.stilo.g.structures.DoubleValues;
+import it.stilo.g.structures.LongIntDict;
 import it.stilo.g.structures.WeightedUndirectedGraph;
-import it.stilo.g.util.GraphReader;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import static java.lang.Integer.min;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.ParseException;
+import utils.GraphUtils;
 
-public class GraphAnalysis {
+public abstract class GraphAnalysis {
 
     public static final String RESOURCES_LOCATION = "src/main/resources/";
+    public static int runner = (int) (Runtime.getRuntime().availableProcessors());
 
     private static int getNumberClusters(String graph) throws IOException {
         //String graph = "src/main/resources/yes_graph.txt";
@@ -122,28 +129,19 @@ public class GraphAnalysis {
 
     private static WeightedUndirectedGraph kcore(WeightedUndirectedGraph g) throws InterruptedException {
         // calculates the kcore and returns a graph. Now its not working who knows why
-        WeightedUndirectedGraph g1 = UnionDisjoint.copy(g, 2);
-        Core cc = CoreDecomposition.getInnerMostCore(g1, 1);
+        WeightedUndirectedGraph g1 = UnionDisjoint.copy(g, runner);
+        Core cc = CoreDecomposition.getInnerMostCore(g1, runner);
         System.out.println("Kcore");
         System.out.println("Minimum degree: " + cc.minDegree);
         System.out.println("Vertices: " + cc.seq.length);
         System.out.println("Seq: " + cc.seq);
 
         g1 = UnionDisjoint.copy(g, 2);
-        WeightedUndirectedGraph s = SubGraph.extract(g1, cc.seq, 1);
+        WeightedUndirectedGraph s = SubGraph.extract(g1, cc.seq, runner);
         return s;
     }
 
-    private static WeightedUndirectedGraph getLargestCC(WeightedUndirectedGraph g) throws InterruptedException {
-        // this get the largest component of the graph and returns a graph too
-        System.out.println(Arrays.deepToString(g.weights));
-        int[] all = new int[g.size];
-        for (int i = 0; i < g.size; i++) {
-            all[i] = i;
-        }
-        System.out.println("CC");
-        Set<Set<Integer>> comps = ConnectedComponents.rootedConnectedComponents(g, all, 2);
-
+    private static Set<Integer> getMaxSet(Set<Set<Integer>> comps) {
         int m = 0;
         Set<Integer> max_set = null;
         // get largest component
@@ -153,16 +151,28 @@ public class GraphAnalysis {
                 m = innerSet.size();
             }
         }
+        return max_set;
+    }
 
+    private static WeightedUndirectedGraph getLargestCC(WeightedUndirectedGraph g) throws InterruptedException {
+        // this get the largest component of the graph and returns a graph too
+        //System.out.println(Arrays.deepToString(g.weights));
+        int[] all = new int[g.size];
+        for (int i = 0; i < g.size; i++) {
+            all[i] = i;
+        }
+        System.out.println("CC");
+        Set<Set<Integer>> comps = ConnectedComponents.rootedConnectedComponents(g, all, runner);
+
+        Set<Integer> max_set = getMaxSet(comps);
         int[] subnodes = new int[max_set.size()];
         Iterator<Integer> iterator = max_set.iterator();
         for (int j = 0; j < subnodes.length; j++) {
             subnodes[j] = iterator.next();
         }
 
-        WeightedUndirectedGraph s = SubGraph.extract(g, subnodes, 1);
+        WeightedUndirectedGraph s = SubGraph.extract(g, subnodes, runner);
         return s;
-
     }
 
     /* 
@@ -208,7 +218,6 @@ public class GraphAnalysis {
 
             // create the array of graphs
             WeightedUndirectedGraph[] gArray = new WeightedUndirectedGraph[c];
-            WeightedUndirectedGraph[] gCC = new WeightedUndirectedGraph[c];
             for (int i = 0; i < c; i++) {
                 System.out.println();
                 System.out.println("Cluster " + i);
@@ -278,34 +287,97 @@ public class GraphAnalysis {
         return hmClusterIDTerms;
     }
 
-    public static WeightedUndirectedGraph readGraph(int graphSize, String filename) throws IOException {
-        WeightedUndirectedGraph g = new WeightedUndirectedGraph(graphSize + 1);
-        GraphReader.readGraph(g, RESOURCES_LOCATION + filename, true);
-        return g;
-    }
+    public static void saveTopKAuthorities(WeightedUndirectedGraph g, LongIntDict direct, int topk, boolean useCache) throws IOException, ParseException, InterruptedException {
 
-    public static void extractAuthoritativeNodes(WeightedUndirectedGraph g) throws IOException {
-        //yes_user_mention_politician
+        String username;
+        long id;
+        Document[] docs;
+        HashMap<String, LinkedHashSet<Integer>> hmGroupType2Users = new HashMap<>(); //data structure that will keep the two sets of users (for yes and no group)
+        List<String> userMentionPolitician;
+        double counter;
 
-        List<String> yesUserMentionPolitician = TxtUtils.txtToList(RESOURCES_LOCATION + "yes_user_mention_politician.txt");
-        for (String row : yesUserMentionPolitician) {
-            String user = row.split(" ")[0];  // get the user screen name
+        if (!useCache) {
+            // iterate through the yes and no group extracting all the users that mentioned
+            // a politician
+            String[] typeGroups = {"yes", "no"};
+            for (String typeGroup : typeGroups) {
+                LinkedHashSet<Integer> usersUnique = new LinkedHashSet<>();
 
-        }
+                // retrieve the twitter id of the users, instead of the name, given that
+                // the graph uses the ID
+                userMentionPolitician = TxtUtils.txtToList(RESOURCES_LOCATION + typeGroup + "_users_mention_politicians.txt");
 
-        int worker = (int) (Runtime.getRuntime().availableProcessors());
-        ArrayList<ArrayList<DoubleValues>> authorities = HubnessAuthority.compute(g, 0.00001, worker);
+                // retrieve all the unique users that mentioned the politicians
+                counter = 0.0;
 
-        for (int i = 0; i < authorities.size(); i++) {
-            ArrayList<DoubleValues> score = authorities.get(i);
-            String x = "";
-            if (i == 0) {
-                x = "Auth ";
-            } else {
-                x = "Hub ";
+                for (String row : userMentionPolitician) {
+                    System.out.println(counter / userMentionPolitician.size() * 100.0 + " % Done");
+                    counter += 1.0;
+
+                    username = row.split(" ")[0];  // get the user screen name
+                    docs = IndexSearcher.searchByField("all_tweets_index/", "user", username, 1);
+
+                    if (docs != null) {
+                        id = Long.parseLong(docs[0].get("id"));  //read just the first resulting doc
+                        usersUnique.add(direct.get(id));  // retrieve the twitter ID (long) and covert to int
+                    }
+                }
+                hmGroupType2Users.put(typeGroup, usersUnique);
             }
 
+            // save the set of users
+            TxtUtils.iterableToTxt(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", hmGroupType2Users.get("no"));
+            TxtUtils.iterableToTxt(RESOURCES_LOCATION + "yes_unique_users_mention_politician.txt", hmGroupType2Users.get("yes"));
+        } else {
+            hmGroupType2Users.put("no", TxtUtils.txtToSet(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt"));
+            hmGroupType2Users.put("yes", TxtUtils.txtToSet(RESOURCES_LOCATION + "yes_unique_users_mention_politician.txt"));
         }
-    }
 
+        // creates a unique set with all the unique users
+        LinkedHashSet<Integer> users = new LinkedHashSet<>(hmGroupType2Users.get("no"));
+        users.addAll(hmGroupType2Users.get("yes"));
+
+        // convert the set to array of int, needed by the method "SubGraph.extract"
+        int[] usersIDs = new int[users.size()];
+        int i = 0;
+        for (Integer userId : users) {
+            usersIDs[i] = userId;
+            i++;
+        }
+
+        // extract the subgraph induced by the users that mentioned the politicians
+        g = SubGraph.extract(g, usersIDs, runner);
+
+        // I was having problems with memory. I had to resize the graph because
+        // the extract creates a graph of the same size as the old graph
+        LongIntDict dictRisize = new LongIntDict();
+        g = GraphUtils.resizeGraph(g, dictRisize, usersIDs.length);
+        // map the id of the old big graph to the new ones
+        usersIDs = new int[users.size()];
+        i = 0;
+        TLongIntIterator iterator = dictRisize.getIterator();
+        while (iterator.hasNext()) {
+            iterator.advance();
+            usersIDs[i] = iterator.value();
+            i++;
+        }
+
+        // extract the largest connected component
+        Set<Integer> setMaxCC = getMaxSet(ConnectedComponents.rootedConnectedComponents(g, usersIDs, runner));
+        g = SubGraph.extract(g, Ints.toArray(setMaxCC), runner);
+
+        // get the authorities
+        ArrayList<ArrayList<DoubleValues>> authorities = HubnessAuthority.compute(g, 0.00001, runner);
+        ArrayList<DoubleValues> scores = authorities.get(0);
+
+        // map back the ids in 'score' to the previous id, before the resizing, then map back to the twitter ID
+        ArrayList<DoubleValues> scoreMappedID = new ArrayList<>();
+        TIntLongMap revDictResize = dictRisize.getInverted();
+        for (DoubleValues score : scores) {
+            scoreMappedID.add(new DoubleValues((int) revDictResize.get(score.index), score.value));
+        }
+
+        // save the first topk authorities
+        TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_authorities.txt", scoreMappedID.subList(0, min(topk, scoreMappedID.size())));
+    }
 }
