@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.AtomicDouble;
 import gnu.trove.iterator.TLongIntIterator;
 import gnu.trove.map.TIntLongMap;
 import index.IndexSearcher;
+import static io.TxtUtils.txtToList;
 import it.stilo.g.algo.ConnectedComponents;
 import it.stilo.g.algo.CoreDecomposition;
 import it.stilo.g.algo.GraphInfo;
@@ -27,10 +28,12 @@ import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import static java.lang.Integer.min;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import org.apache.lucene.document.Document;
@@ -287,7 +290,7 @@ public abstract class GraphAnalysis {
         return hmClusterIDTerms;
     }
 
-    public static void saveTopKAuthorities(WeightedUndirectedGraph g, LongIntDict direct, int topk, boolean useCache) throws IOException, ParseException, InterruptedException {
+    public static void saveTopKAuthorities(WeightedUndirectedGraph g, LongIntDict mapLong2Int, int topk, boolean useCache) throws IOException, ParseException, InterruptedException {
 
         String username;
         long id;
@@ -319,7 +322,7 @@ public abstract class GraphAnalysis {
 
                     if (docs != null) {
                         id = Long.parseLong(docs[0].get("id"));  //read just the first resulting doc
-                        usersUnique.add(direct.get(id));  // retrieve the twitter ID (long) and covert to int
+                        usersUnique.add(mapLong2Int.get(id));  // retrieve the twitter ID (long) and covert to int
                     }
                 }
                 hmGroupType2Users.put(typeGroup, usersUnique);
@@ -379,5 +382,74 @@ public abstract class GraphAnalysis {
 
         // save the first topk authorities
         TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_authorities.txt", scoreMappedID.subList(0, min(topk, scoreMappedID.size())));
+    }
+
+    public static void printSummaryAuthority(TIntLongMap mapIntToLong) throws IOException, ParseException, InterruptedException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+
+        ArrayList<Integer> yesUniqueUsersMentionPolitician = txtToList(RESOURCES_LOCATION + "yes_unique_users_mention_politician.txt", Integer.class);
+        ArrayList<Integer> noUniqueUsersMentionPolitician = txtToList(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", Integer.class);
+        ArrayList<ArrayList> topAuthorities = txtToList(RESOURCES_LOCATION + "top_authorities.txt", Integer.class, Double.class);
+
+        // initialize the summaryAuthority
+        LinkedHashMap<String, ArrayList> summaryAuthority = new LinkedHashMap<>();
+        summaryAuthority.put("yes", new ArrayList());
+        summaryAuthority.put("yesunique", new ArrayList());
+        summaryAuthority.put("no", new ArrayList());
+        summaryAuthority.put("nounique", new ArrayList());
+
+        for (ArrayList values : topAuthorities) {
+            // users that mentioned the yes supporters
+            if (yesUniqueUsersMentionPolitician.contains(values.get(0))) {
+                // summaryAuthority.put("yes",  summaryAuthority.get("yes").add(values.get(0)));
+                summaryAuthority.get("yes").add(values.get(0));
+                // users that mentioned the yes supporters but not the no supporters
+                if (!noUniqueUsersMentionPolitician.contains(values.get(0))) {
+                    //summaryAuthority.put("yesunique", summaryAuthority.get("yesunique") + 1);
+                    summaryAuthority.get("yesunique").add(values.get(0));
+                }
+            }
+            // users that mentioned the no supporters
+            if (noUniqueUsersMentionPolitician.contains(values.get(0))) {
+                //summaryAuthority.put("no", summaryAuthority.get("no") + 1);
+                summaryAuthority.get("no").add(values.get(0));
+
+                // users that mentioned the no supporters but not the yes supporters
+                if (!yesUniqueUsersMentionPolitician.contains(values.get(0))) {
+                    //summaryAuthority.put("nounique", summaryAuthority.get("nounique") + 1);
+                    summaryAuthority.get("nounique").add(values.get(0));
+                }
+
+            }
+        }
+
+        System.out.println(summaryAuthority.get("yes").size() + " of the top authorities mentioned the Yes supporters");
+        System.out.println(summaryAuthority.get("no").size() + " of the top authorities mentioned the No supporters");
+        System.out.println(summaryAuthority.get("yesunique").size() + " of the top authorities mentioned just the Yes supporters");
+        System.out.println(summaryAuthority.get("nounique").size() + " of the top authorities mentioned just the No supporters");
+        System.out.println();
+
+        Document[] docs;
+        Long twitterID;
+        // print the authorities that mentioned uniquely the Yes supporters
+        System.out.println("---------Top authorities that mentioned just the Yes supporters---------");
+        for (Object userID : summaryAuthority.get("yesunique")) {
+            twitterID = mapIntToLong.get((int) userID);
+            docs = IndexSearcher.searchByField("all_tweets_index/", "id", twitterID, 1);
+
+            if (docs != null) {
+                System.out.println(docs[0].get("user"));
+            }
+        }
+
+        // print the authorities that mentioned uniquely the No supporters
+        System.out.println("---------Top authorities that mentioned just the No supporters---------");
+        for (Object userID : summaryAuthority.get("nounique")) {
+            twitterID = mapIntToLong.get((int) userID);
+            docs = IndexSearcher.searchByField("all_tweets_index/", "id", twitterID, 1);
+
+            if (docs != null) {
+                System.out.println(docs[0].get("user"));
+            }
+        }
     }
 }

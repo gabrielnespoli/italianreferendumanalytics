@@ -1,8 +1,6 @@
-import analysis.CoocurrenceGraph;
+
 import analysis.GraphAnalysis;
 import static analysis.GraphAnalysis.RESOURCES_LOCATION;
-import analysis.TemporalAnalysis;
-import index.IndexBuilder;
 import it.stilo.g.structures.LongIntDict;
 import it.stilo.g.structures.WeightedUndirectedGraph;
 import it.stilo.g.util.GraphReader;
@@ -11,11 +9,13 @@ import java.text.ParseException;
 import twitter4j.JSONException;
 
 public class Main {
-    public static void main(String []args) throws IOException, JSONException, ParseException, Exception {
+
+    public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
         boolean useCache = true;
         boolean plot = true;
+        boolean calculateTopAuthorities = false;
+        boolean printAuthorities = true;
         double threshold = 0.07;
-        
         /*
         if (!useCache) {
             IndexBuilder.createIndexAllTweets();
@@ -32,13 +32,21 @@ public class Main {
         if (plot == true) {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
-        */
+         */
+
         // do the authorities and hubs analyses
         int graphSize = 16815933;
-        String graphFilename = "Official_SBN-ITA-2016-Net.gz"; //"Official_SBN-ITA-2016-Net.gz";
         WeightedUndirectedGraph g = new WeightedUndirectedGraph(graphSize + 1);
-        LongIntDict direct = new LongIntDict();
-        GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, direct, false);
-        GraphAnalysis.saveTopKAuthorities(g, direct, 1000, useCache);
+        String graphFilename = "data.gz"; //"Official_SBN-ITA-2016-Net.gz";
+        LongIntDict mapLong2Int = new LongIntDict();
+        GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
+
+        if (calculateTopAuthorities) {
+            GraphAnalysis.saveTopKAuthorities(g, mapLong2Int, 1000, useCache);
+        }
+
+        if (printAuthorities) {
+            GraphAnalysis.printSummaryAuthority(mapLong2Int.getInverted());
+        }
     }
 }
