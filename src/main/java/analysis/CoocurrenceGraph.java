@@ -104,6 +104,7 @@ public abstract class CoocurrenceGraph {
 
     }
 
+    //public static void generateCoocurrenceGraph() throws IOException, ParseException, Exception {
     public static void generateCoocurrenceGraph() throws IOException, ParseException, Exception {
         String clusterYes = CLUSTER_DIRECTORY + "yesClusters.txt";
         String clusterNo = CLUSTER_DIRECTORY + "noClusters.txt";

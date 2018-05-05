@@ -138,7 +138,7 @@ public class TweetsOpinion {
         String queryTxt = "";
         // Load the list of politicians
         System.out.println("tokens in the query: ");
-        if (mode == "politicians") {
+        if ("politicians".equals(mode)) {
             List<String> politicians = TxtUtils.txtToList(filepath);
 
             for (String p : politicians) {
@@ -148,7 +148,7 @@ public class TweetsOpinion {
         }
 
         // Load the list of yes words
-        if (mode == "words") {
+        if ("words".equals(mode)) {
             List<String> words = TxtUtils.txtToList(filepath);
 
             Set<String> wordsClean = new HashSet<String>();
@@ -220,7 +220,7 @@ public class TweetsOpinion {
         return data;
     }
 
-    private static void MakeYesNoScores(Map<String, Integer> mapYesPoliticians, Map<String, Integer> mapNoPoliticians) throws IOException {
+    private static void MakeYesNoScores(Map<String, Integer> mapYesPoliticians, Map<String, Integer> mapNoPoliticians, Map<String, Integer> mapYesWords, Map<String, Integer> mapNoWords) throws IOException {
         // this divides the users that mention the politicians into yes or no  suporters
 
         // create the bag of all users
@@ -238,19 +238,30 @@ public class TweetsOpinion {
         int counter = 0;
         for (String user : allUsers) {
             counter = showProgress(counter, allUsers.size());
-            int yesScore = 0;
-            int noScore = 0;
-            yesScore = mapYesPoliticians.getOrDefault(user, 0);
-            noScore = mapNoPoliticians.getOrDefault(user, 0);
-            int finalScore = yesScore - noScore;
+            int yesScoreP = 0;
+            int noScoreP = 0;
+            int yesScoreW = 0;
+            int noScoreW = 0;
+            yesScoreP = mapYesPoliticians.getOrDefault(user, 0);
+            noScoreP = mapNoPoliticians.getOrDefault(user, 0);
+            yesScoreW = mapYesWords.getOrDefault(user, 0);
+            noScoreW = mapNoWords.getOrDefault(user, 0);
+            int finalScoreP = yesScoreP - noScoreP;
+            int finalScoreW = yesScoreW - noScoreW;
+            
+            System.out.println("User: " + user + ", W score: " + finalScoreW);
 
-            if (finalScore > 0) {
-                //System.out.println(user + " yes");
+            if (finalScoreP > 0 && finalScoreW > 0) {
                 mYes.add(user);
             }
-            if (finalScore < 0) {
-                //System.out.println(user + " no");
+            if (finalScoreP > 0 && finalScoreW < 0) {
                 mNo.add(user);
+            }
+            if (finalScoreP < 0 && finalScoreW < 0) {
+                mNo.add(user);
+            }
+            if (finalScoreP < 0 && finalScoreW > 0) {
+                mYes.add(user);
             }
         }
         TxtUtils.iterableToTxt("src/main/resources/yes_M.txt", mYes);
@@ -409,18 +420,20 @@ public class TweetsOpinion {
 
         // Part 1.1
         // Find the number of times the users mention the politicians or the words of the clusters, this has to be ran only once
-        /*
+        
         Map<String, Integer> mapYesPoliticians = new HashMap<String, Integer>();
         Map<String, Integer> mapYesWords = new HashMap<String, Integer>();
+        
         mapYesPoliticians = classifySupporters("politicians", "src/main/resources/yes_politicians.txt");
-        mapYesWords = classifySupporters("words", "src/main/resources/yes_graph.txt");
+        mapYesWords = classifySupporters("words", "src/main/resources/yes_kcore.txt");
+
         mapToTxt("src/main/resources/yes_map_users_politicians.txt", mapYesPoliticians);
         mapToTxt("src/main/resources/yes_map_users_words.txt", mapYesWords);
         
         Map<String, Integer> mapNoPoliticians = new HashMap<String, Integer>();
         Map<String, Integer> mapNoWords = new HashMap<String, Integer>();
         mapNoPoliticians = classifySupporters("politicians", "src/main/resources/no_politicians.txt");
-        mapNoWords = classifySupporters("words", "src/main/resources/no_graph.txt");
+        mapNoWords = classifySupporters("words", "src/main/resources/no_kcore.txt");
         mapToTxt("src/main/resources/no_map_users_politicians.txt", mapNoPoliticians);
         mapToTxt("src/main/resources/no_map_users_words.txt", mapNoWords);
         
@@ -431,20 +444,26 @@ public class TweetsOpinion {
         //Map<String, Integer> mapNoPoliticians = new HashMap<String, Integer>();
         mapNoPoliticians = TxtToMap("src/main/resources/no_map_users_politicians.txt");
         
-        // Make the groups
-        MakeYesNoScores(mapYesPoliticians, mapNoPoliticians);
+        //Map<String, Integer> mapYesWords = new HashMap<String, Integer>();
+        mapYesPoliticians = TxtToMap("src/main/resources/yes_map_users_words.txt");
         
-         */
+        //Map<String, Integer> mapNoWords = new HashMap<String, Integer>();
+        mapNoPoliticians = TxtToMap("src/main/resources/no_map_users_words.txt");
+        
+        // Make the groups
+        MakeYesNoScores(mapYesPoliticians, mapNoPoliticians, mapYesWords, mapNoWords);
+        
+         
         // Part 1.1 and 1.3, this creates a file where each line is a tweet: <user> <politician>, and can be repeated
         // and an other file that is <user> <politician> <number of times mentioned>
         // Uncomment to create the list of users who mention yes or no politicians
-        /*
+        
         System.out.println("#### YES");
         findSupporters("src/main/resources/yes_politicians.txt", "src/main/resources/yes_users_mention_politicians.txt", "src/main/resources/yes_map_users_mention_politicians.txt");
 
         System.out.println("#### NO");
         findSupporters("src/main/resources/no_politicians.txt", "src/main/resources/no_users_mention_politicians.txt", "src/main/resources/no_map_users_mention_politicians.txt");
-         */
+         
         // Part 1.3 
         hubnessGraph13();
 
