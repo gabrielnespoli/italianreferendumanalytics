@@ -12,6 +12,7 @@ import it.stilo.g.algo.ConnectedComponents;
 import it.stilo.g.algo.CoreDecomposition;
 import it.stilo.g.algo.GraphInfo;
 import it.stilo.g.algo.HubnessAuthority;
+import it.stilo.g.algo.KppNeg;
 import it.stilo.g.algo.SubGraphByEdgesWeight;
 import it.stilo.g.structures.Core;
 import it.stilo.g.util.NodesMapper;
@@ -21,6 +22,7 @@ import it.stilo.g.algo.SubGraph;
 import it.stilo.g.algo.UnionDisjoint;
 import it.stilo.g.structures.DoubleValues;
 import it.stilo.g.structures.LongIntDict;
+import it.stilo.g.structures.WeightedDirectedGraph;
 import it.stilo.g.structures.WeightedUndirectedGraph;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -39,6 +41,7 @@ import java.util.Set;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.ParseException;
 import utils.GraphUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 
 public abstract class GraphAnalysis {
 
@@ -290,7 +293,7 @@ public abstract class GraphAnalysis {
         return hmClusterIDTerms;
     }
 
-    public static void saveTopKAuthorities(WeightedUndirectedGraph g, LongIntDict mapLong2Int, int topk, boolean useCache) throws IOException, ParseException, InterruptedException {
+    public static void saveTopKAuthorities(WeightedDirectedGraph g, LongIntDict mapLong2Int, int topk, boolean useCache) throws IOException, ParseException, InterruptedException {
 
         String username;
         long id;
@@ -351,14 +354,15 @@ public abstract class GraphAnalysis {
         // extract the subgraph induced by the users that mentioned the politicians
         g = SubGraph.extract(g, usersIDs, runner);
 
-        // I was having problems with memory. I had to resize the graph because
-        // the extract creates a graph of the same size as the old graph
-        LongIntDict dictRisize = new LongIntDict();
-        g = GraphUtils.resizeGraph(g, dictRisize, usersIDs.length);
+        // The SubGraph.extract() creates a graph of the same size as the old graph
+        // and it raises an exception due to insufficient memory.
+        // We had to resize the graph.
+        LongIntDict dictResize = new LongIntDict();
+        g = GraphUtils.resizeGraph(g, dictResize, usersIDs.length);
         // map the id of the old big graph to the new ones
         usersIDs = new int[users.size()];
         i = 0;
-        TLongIntIterator iterator = dictRisize.getIterator();
+        TLongIntIterator iterator = dictResize.getIterator();
         while (iterator.hasNext()) {
             iterator.advance();
             usersIDs[i] = iterator.value();
@@ -375,7 +379,7 @@ public abstract class GraphAnalysis {
 
         // map back the ids in 'score' to the previous id, before the resizing, then map back to the twitter ID
         ArrayList<DoubleValues> scoreMappedID = new ArrayList<>();
-        TIntLongMap revDictResize = dictRisize.getInverted();
+        TIntLongMap revDictResize = dictResize.getInverted();
         for (DoubleValues score : scores) {
             scoreMappedID.add(new DoubleValues((int) revDictResize.get(score.index), score.value));
         }
@@ -450,6 +454,60 @@ public abstract class GraphAnalysis {
             if (docs != null) {
                 System.out.println(docs[0].get("user"));
             }
+        }
+    }
+
+    /*
+    The method receives a graph, extract the nodes that have a degree higher than threshold,
+    and finally calculate their reachability using the KppNeg algorithm. The top 500 
+    players are saved in disk
+     */
+    public static void saveTopKPlayers(WeightedDirectedGraph g, int[] nodes, LongIntDict mapLong2Int, int topk, int threshold) throws InterruptedException, IOException, ParseException {
+        ArrayList<Integer> subGraphNodes = new ArrayList<>();
+
+        // iterate through the graph and add to a list just the nodes if high degree
+        for (int i = 1; i < g.in.length; i++) {
+            if (g.in[i] != null && g.in[i].length >= threshold) {
+                subGraphNodes.add(i);
+            }
+        }
+
+        g = SubGraph.extract(g, subGraphNodes.stream().mapToInt(i -> i).toArray(), runner);
+
+        List<DoubleValues> brokers = KppNeg.searchBroker(g, subGraphNodes.stream().mapToInt(i -> i).toArray(), runner);
+
+        // convert from the node position of the graph into the TwitterID, and then
+        // to the Twitter name
+        ArrayList<ImmutablePair> brokersUsername = new ArrayList<>();
+        TIntLongMap mapIntToLong = mapLong2Int.getInverted();
+        long twitterID;
+        Document[] docs;
+        String username;
+        for (DoubleValues broker : brokers) {
+            twitterID = mapIntToLong.get((int) broker.index);
+            docs = IndexSearcher.searchByField("all_tweets_index/", "id", twitterID, 1);
+
+            username = null;
+            if (docs != null) {
+                username = docs[0].get("user");
+                brokersUsername.add(new ImmutablePair<String, Double>(username, broker.value));
+            } else {
+                docs = IndexSearcher.searchByField("all_tweets_index/", "rt_id", twitterID, 1);
+                if (docs != null) {
+                    username = docs[0].get("rt_user");
+                    brokersUsername.add(new ImmutablePair<String, Double>(username, broker.value));
+                }
+
+            }
+        }
+        // save the first topk authorities
+        TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_k_players.txt", brokersUsername.subList(0, min(topk, brokersUsername.size())));
+    }
+
+    public static void printTopKPlayers(TIntLongMap mapIntToLong) throws Exception {
+        ArrayList<String> topKPlayers = TxtUtils.txtToList(RESOURCES_LOCATION + "top_k_players.txt", String.class);
+        for (String player : topKPlayers) {
+            System.out.println(player);
         }
     }
 }
