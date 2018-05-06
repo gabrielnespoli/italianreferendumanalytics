@@ -25,18 +25,23 @@ public class Main {
         boolean printKplayers = true;
         double threshold = 0.07;
 
+        ArrayList<String> usersList;
+        int[] nodes;
+        Document[] docs;
+        long id;
+        int i;
+
         if (!useCache) {
             IndexBuilder.createIndexAllTweets();
             IndexBuilder.createYesNoIndex();
         }
-        
+
         /*
         
         TemporalAnalysis.clusterTopNTerms(1000, 12, 20);
         CoocurrenceGraph.generateCoocurrenceGraph();
         GraphAnalysis.extractKCoreAndConnectedComponent(threshold);
          */
-
         String[] prefixYesNo = {"yes", "no"};
         String[] clusterTypes = {"kcore", "largestcc"};
         if (plot == true) {
@@ -59,23 +64,16 @@ public class Main {
 
         if (calculateKplayers) {
             for (String supportType : prefixYesNo) {
-                ArrayList<String> usersList = txtToList(RESOURCES_LOCATION + supportType + "_M.txt", String.class); // retrieve the users names
-                int[] nodes = new int[usersList.size()];
-                Document[] docs;
-                long id = 0;
-                int i = 0;
+                usersList = txtToList(RESOURCES_LOCATION + supportType + "_M.txt", String.class); // retrieve the users names
+                nodes = new int[usersList.size()];
+                i = 0;
                 // from the users names to their Twitter ID, then to their respective position in the graph (int)
                 // name -> twitterID -> position in the graph
                 for (String username : usersList) {
                     docs = IndexSearcher.searchByField("all_tweets_index/", "user", username, 1);
 
                     if (docs != null) {
-                        try {
-                            id = Long.parseLong(docs[0].get("id"));  //read just the first resulting doc
-                        } catch (Exception e) {
-                            System.out.println(i);
-                            System.out.println(docs[0].get("id"));
-                        }
+                        id = Long.parseLong(docs[0].get("id"));  //read just the first resulting doc
                         nodes[i] = mapLong2Int.get(id);  // retrieve the twitter ID (long) and covert to int (the position in the graph)
                     }
                     i++;
