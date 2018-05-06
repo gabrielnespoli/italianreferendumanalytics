@@ -72,6 +72,7 @@ public class Main {
                             id = Long.parseLong(docs[0].get("id"));  //read just the first resulting doc
                         } catch (Exception e) {
                             System.out.println(i);
+                            System.out.println(docs[0].get("id"));
                         }
                         nodes[i] = mapLong2Int.get(id);  // retrieve the twitter ID (long) and covert to int (the position in the graph)
                     }
