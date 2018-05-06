@@ -60,7 +60,7 @@ public class Main {
                 ArrayList<String> usersList = txtToList(RESOURCES_LOCATION + supportType + "_M.txt", String.class); // retrieve the users names
                 int[] nodes = new int[usersList.size()];
                 Document[] docs;
-                long id;
+                long id = 0;
                 int i = 0;
                 // from the users names to their Twitter ID, then to their respective position in the graph (int)
                 // name -> twitterID -> position in the graph
@@ -68,7 +68,11 @@ public class Main {
                     docs = IndexSearcher.searchByField("all_tweets_index/", "user", username, 1);
 
                     if (docs != null) {
-                        id = Long.parseLong(docs[0].get("id"));  //read just the first resulting doc
+                        try {
+                            id = Long.parseLong(docs[0].get("id"));  //read just the first resulting doc
+                        } catch (Exception e) {
+                            System.out.println(i);
+                        }
                         nodes[i] = mapLong2Int.get(id);  // retrieve the twitter ID (long) and covert to int (the position in the graph)
                     }
                     i++;
