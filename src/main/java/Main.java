@@ -2,6 +2,7 @@
 import analysis.GraphAnalysis;
 import static analysis.GraphAnalysis.RESOURCES_LOCATION;
 import analysis.TemporalAnalysis;
+import index.IndexBuilder;
 import index.IndexSearcher;
 import static io.TxtUtils.txtToList;
 import it.stilo.g.structures.LongIntDict;
@@ -16,19 +17,20 @@ import twitter4j.JSONException;
 public class Main {
 
     public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
-        boolean useCache = true;
+        boolean useCache = false;
         boolean plot = false;
         boolean calculateTopAuthorities = false;
         boolean printAuthorities = false;
         boolean calculateKplayers = true;
         boolean printKplayers = true;
         double threshold = 0.07;
-        /*
+
         if (!useCache) {
             IndexBuilder.createIndexAllTweets();
             IndexBuilder.createYesNoIndex();
         }
         
+        /*
         
         TemporalAnalysis.clusterTopNTerms(1000, 12, 20);
         CoocurrenceGraph.generateCoocurrenceGraph();
