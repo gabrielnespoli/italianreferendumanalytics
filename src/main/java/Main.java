@@ -19,7 +19,7 @@ public class Main {
     public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
         boolean createIndex = false;
         boolean useCache = true;
-        boolean plot = false;
+        boolean plotTS = false;
         boolean calculateTopAuthorities = false;
         boolean printAuthorities = false;
         boolean calculateKplayers = true;
@@ -45,7 +45,7 @@ public class Main {
          */
         String[] prefixYesNo = {"yes", "no"};
         String[] clusterTypes = {"kcore", "largestcc"};
-        if (plot == true) {
+        if (plotTS) {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
 
@@ -79,7 +79,7 @@ public class Main {
                     }
                     i++;
                 }
-                GraphAnalysis.saveTopKPlayers(g, nodes, mapLong2Int, 1, 50);
+                GraphAnalysis.saveTopKPlayers(g, nodes, mapLong2Int, 500, 50);
             }
         }
 
