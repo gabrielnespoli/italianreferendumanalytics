@@ -78,7 +78,7 @@ public class Main {
                     }
                     i++;
                 }
-                GraphAnalysis.saveTopKPlayers(g, nodes, mapLong2Int, 500, 3);
+                GraphAnalysis.saveTopKPlayers(g, nodes, mapLong2Int, 1, 50);
             }
         }
 
