@@ -17,7 +17,8 @@ import twitter4j.JSONException;
 public class Main {
 
     public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
-        boolean useCache = false;
+        boolean createIndex = false;
+        boolean useCache = true;
         boolean plot = false;
         boolean calculateTopAuthorities = false;
         boolean printAuthorities = false;
@@ -31,7 +32,7 @@ public class Main {
         long id;
         int i;
 
-        if (!useCache) {
+        if (createIndex) {
             IndexBuilder.createIndexAllTweets();
             IndexBuilder.createYesNoIndex();
         }
