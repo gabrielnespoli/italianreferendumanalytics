@@ -465,7 +465,7 @@ public abstract class GraphAnalysis {
     public static void saveTopKPlayers(WeightedDirectedGraph g, int[] nodes, LongIntDict mapLong2Int, int topk, int threshold) throws InterruptedException, IOException, ParseException {
         ArrayList<Integer> subGraphNodes = new ArrayList<>();
 
-        // iterate through the graph and add to a list just the nodes if high degree
+        // iterate through the graph and add to a list just the nodes with high degree
         for (int i = 1; i < g.in.length; i++) {
             if (g.in[i] != null && g.in[i].length >= threshold) {
                 subGraphNodes.add(i);
@@ -474,7 +474,7 @@ public abstract class GraphAnalysis {
 
         g = SubGraph.extract(g, subGraphNodes.stream().mapToInt(i -> i).toArray(), runner);
 
-        List<DoubleValues> brokers = KppNeg.searchBroker(g, subGraphNodes.stream().mapToInt(i -> i).toArray(), runner);
+        List<DoubleValues> brokers = KppNeg.searchBroker(g, nodes , runner); //subGraphNodes.stream().mapToInt(i -> i).toArray()
 
         // convert from the node position of the graph into the TwitterID, and then
         // to the Twitter name

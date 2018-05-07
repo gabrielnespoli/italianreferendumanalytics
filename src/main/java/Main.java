@@ -11,6 +11,7 @@ import it.stilo.g.util.GraphReader;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.apache.lucene.document.Document;
 import twitter4j.JSONException;
 
@@ -79,7 +80,7 @@ public class Main {
                     }
                     i++;
                 }
-                GraphAnalysis.saveTopKPlayers(g, nodes, mapLong2Int, 500, 50);
+                GraphAnalysis.saveTopKPlayers(g, Arrays.copyOfRange(nodes, 0, 100), mapLong2Int, 500, 50);
             }
         }
 
