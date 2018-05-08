@@ -1,10 +1,13 @@
 
 import analysis.GraphAnalysis;
 import static analysis.GraphAnalysis.RESOURCES_LOCATION;
+import static analysis.GraphAnalysis.runner;
 import analysis.TemporalAnalysis;
 import index.IndexBuilder;
 import index.IndexSearcher;
 import static io.TxtUtils.txtToList;
+import it.stilo.g.algo.KppNeg;
+import it.stilo.g.structures.DoubleValues;
 import it.stilo.g.structures.LongIntDict;
 import it.stilo.g.structures.WeightedDirectedGraph;
 import it.stilo.g.util.GraphReader;
@@ -12,6 +15,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import org.apache.lucene.document.Document;
 import twitter4j.JSONException;
 
@@ -49,7 +53,6 @@ public class Main {
         if (plotTS) {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
-
         int graphSize = 16815933;
         WeightedDirectedGraph g = new WeightedDirectedGraph(graphSize + 1);
         String graphFilename = "Official_SBN-ITA-2016-Net.gz";

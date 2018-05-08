@@ -474,7 +474,10 @@ public abstract class GraphAnalysis {
 
         g = SubGraph.extract(g, subGraphNodes.stream().mapToInt(i -> i).toArray(), runner);
 
-        List<DoubleValues> brokers = KppNeg.searchBroker(g, nodes , runner); //subGraphNodes.stream().mapToInt(i -> i).toArray()
+        long start = System.currentTimeMillis();
+        List<DoubleValues> brokers = KppNeg.searchBroker(g, nodes, runner); //subGraphNodes.stream().mapToInt(i -> i).toArray()
+        long end = System.currentTimeMillis();
+        System.out.println("Took : " + ((end - start) / 1000) + " seconds");
 
         // convert from the node position of the graph into the TwitterID, and then
         // to the Twitter name
