@@ -83,7 +83,7 @@ public class Main {
                     }
                     i++;
                 }
-                GraphAnalysis.saveTopKPlayers(g, Arrays.copyOfRange(nodes, 0, 100), mapLong2Int, 500, 50);
+                GraphAnalysis.saveTopKPlayers(g, Arrays.copyOfRange(nodes, 0, 100), mapLong2Int, 500, 200);
             }
         }
 
