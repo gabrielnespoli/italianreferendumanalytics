@@ -1,13 +1,11 @@
 
+import analysis.DistributionOverTime;
 import analysis.GraphAnalysis;
 import static analysis.GraphAnalysis.RESOURCES_LOCATION;
-import static analysis.GraphAnalysis.runner;
 import analysis.TemporalAnalysis;
 import index.IndexBuilder;
 import index.IndexSearcher;
 import static io.TxtUtils.txtToList;
-import it.stilo.g.algo.KppNeg;
-import it.stilo.g.structures.DoubleValues;
 import it.stilo.g.structures.LongIntDict;
 import it.stilo.g.structures.WeightedDirectedGraph;
 import it.stilo.g.util.GraphReader;
@@ -22,14 +20,25 @@ import twitter4j.JSONException;
 public class Main {
 
     public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
+        boolean plotDistrTweets = true;
         boolean createIndex = false;
         boolean useCache = false;
         boolean plotTS = false;
+        boolean loadGraph = false;
         boolean calculateTopAuthorities = true;
         boolean printAuthorities = true;
         boolean calculateKplayers = false;
         boolean printKplayers = false;
         double threshold = 0.07;
+
+        String[] prefixYesNo = {"yes", "no"};
+        
+        if (plotDistrTweets) {
+            List<double[]> histValues = new ArrayList<>();
+            histValues.add(DistributionOverTime.loadHistogram("histogramYes.txt"));
+            histValues.add(DistributionOverTime.loadHistogram("histogramNo.txt"));
+            DistributionOverTime.plotHistogram( Arrays.asList(prefixYesNo), histValues, 20);
+        }
 
         ArrayList<String> usersList;
         int[] nodes;
@@ -48,16 +57,21 @@ public class Main {
         CoocurrenceGraph.generateCoocurrenceGraph();
         GraphAnalysis.extractKCoreAndConnectedComponent(threshold);
          */
-        String[] prefixYesNo = {"yes", "no"};
+        
         String[] clusterTypes = {"kcore", "largestcc"};
         if (plotTS) {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
-        int graphSize = 16815933;
-        WeightedDirectedGraph g = new WeightedDirectedGraph(graphSize + 1);
-        String graphFilename = "Official_SBN-ITA-2016-Net.gz";
-        LongIntDict mapLong2Int = new LongIntDict();
-        GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
+
+        WeightedDirectedGraph g = null;
+        LongIntDict mapLong2Int = null;
+        if (loadGraph) {
+            int graphSize = 16815933;
+            g = new WeightedDirectedGraph(graphSize + 1);
+            String graphFilename = "Official_SBN-ITA-2016-Net.gz";
+            mapLong2Int = new LongIntDict();
+            GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
+        }
 
         if (calculateTopAuthorities) {
             GraphAnalysis.saveTopKAuthorities(g, mapLong2Int, 1000, useCache);

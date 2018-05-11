@@ -3,7 +3,9 @@ package utils;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Paint;
 import java.util.ArrayList;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
@@ -11,22 +13,31 @@ import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.block.BlockBorder;
+import org.jfree.chart.plot.DefaultDrawingSupplier;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.title.TextTitle;
+import org.jfree.data.statistics.HistogramDataset;
+import org.jfree.data.statistics.HistogramType;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
-public class TimeSeriesPlotter extends JFrame {
+public class Plotter extends JFrame {
 
     private ArrayList<double[]> xvaluesList;
     private ArrayList<double[]> yvaluesList;
     private ArrayList<String> labels;
     private String title;
+    private List<String> allHistLabels;
+    private List<double[]> allHistValues;
+    private int bins;
+    private String xaxis;
+    private String yaxis;
+    private JFreeChart chart;
 
-    public TimeSeriesPlotter(String title, ArrayList<String> labels, ArrayList<double[]> xvaluesList, ArrayList<double[]> yvaluesList) {
+    public Plotter(String title, ArrayList<String> labels, ArrayList<double[]> xvaluesList, ArrayList<double[]> yvaluesList) {
 
         if (xvaluesList.size() != yvaluesList.size()) {
             throw new IllegalArgumentException("The lists labels, xvaluesArray and yvaluesArray have different sizes");
@@ -36,14 +47,67 @@ public class TimeSeriesPlotter extends JFrame {
         this.labels = labels;
         this.xvaluesList = xvaluesList;
         this.yvaluesList = yvaluesList;
-
-        initUI();
+        initUITS();
     }
 
-    private void initUI() {
+    public Plotter(String title, String xaxis, String yaxis, List<String> allHistLabels, List<double[]> histValues, int bins) {
+        this.title = title;
+        this.allHistLabels = allHistLabels;
+        this.allHistValues = histValues;
+        this.bins = bins;
+        this.xaxis = xaxis;
+        this.yaxis = yaxis;
+        initUIHist();
+    }
 
-        XYDataset dataset = createDataset();
-        JFreeChart chart = createChart(dataset);
+    public JFreeChart getChart() {
+        return this.chart;
+    }
+    
+    // initialize variables to plot the timeseries
+    private void initUITS() {
+
+        XYDataset dataset = createTSDataset();
+        this.chart = createTSChart(dataset);
+        initFrame();
+    }
+
+    // initialize variables to plot the histogram
+    private void initUIHist() {
+
+        HistogramDataset dataset = new HistogramDataset();
+        dataset.setType(HistogramType.FREQUENCY);
+
+        for (int i = 0; i < this.allHistValues.size(); i++) {
+            dataset.addSeries(this.allHistLabels.get(i), this.allHistValues.get(i), bins);
+        }
+
+        PlotOrientation orientation = PlotOrientation.VERTICAL;
+        boolean show = true;
+        boolean toolTips = false;
+        boolean urls = false;
+        this.chart = ChartFactory.createHistogram(this.title, this.xaxis, this.yaxis,
+                dataset, orientation, show, toolTips, urls);
+        
+        // change the colors to translucid
+        XYPlot plot = this.chart.getXYPlot();
+        Paint[] paintArray = null;
+        paintArray = new Paint[2];
+        paintArray[0] = new Color(0x80ff0000, true);// translucent red, green & blue
+        paintArray[1] = new Color(0x800000ff, true);
+
+        plot.setDrawingSupplier(new DefaultDrawingSupplier(
+                paintArray,
+                DefaultDrawingSupplier.DEFAULT_FILL_PAINT_SEQUENCE,
+                DefaultDrawingSupplier.DEFAULT_OUTLINE_PAINT_SEQUENCE,
+                DefaultDrawingSupplier.DEFAULT_STROKE_SEQUENCE,
+                DefaultDrawingSupplier.DEFAULT_OUTLINE_STROKE_SEQUENCE,
+                DefaultDrawingSupplier.DEFAULT_SHAPE_SEQUENCE));
+        
+        initFrame();
+    }
+
+    private void initFrame() {
         ChartPanel chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         chartPanel.setBackground(Color.white);
@@ -60,7 +124,7 @@ public class TimeSeriesPlotter extends JFrame {
     iterate through the lists and will create series with a label and values
     of each position of the list.
      */
-    private XYDataset createDataset() {
+    private XYDataset createTSDataset() {
         XYSeriesCollection dataset = new XYSeriesCollection();
         XYSeries series;
         double[] xvalues;
@@ -83,7 +147,7 @@ public class TimeSeriesPlotter extends JFrame {
         return dataset;
     }
 
-    private JFreeChart createChart(XYDataset dataset) {
+    private JFreeChart createTSChart(XYDataset dataset) {
 
         JFreeChart chart = ChartFactory.createXYLineChart(
                 this.title,

@@ -2,7 +2,7 @@ package analysis;
 
 import index.IndexBuilder;
 import static index.IndexBuilder.INDEX_DIRECTORY;
-import utils.TimeSeriesPlotter;
+import utils.Plotter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -355,7 +355,7 @@ public abstract class TemporalAnalysis {
                     ArrayList<double[]> xvaluesList = dataToPlot.getMiddle();
                     ArrayList<double[]> yvaluesList = dataToPlot.getRight();
                     graphTitle = "Evolution of terms frequency on time (parameters: " + prefix + ", " + clusterType + ")";
-                    TimeSeriesPlotter tsPlotter = new TimeSeriesPlotter(graphTitle, labels, xvaluesList, yvaluesList);
+                    Plotter tsPlotter = new Plotter(graphTitle, labels, xvaluesList, yvaluesList);
                     tsPlotter.plot();
                 }
 

@@ -44,7 +44,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 public abstract class GraphAnalysis {
 
-    public static final String RESOURCES_LOCATION = "src/main/resources/";
+    public static String RESOURCES_LOCATION = "src/main/resources/";
     public static int runner = (int) (Runtime.getRuntime().availableProcessors());
 
     private static int getNumberClusters(String graph) throws IOException {

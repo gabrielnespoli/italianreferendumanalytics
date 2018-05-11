@@ -1,6 +1,7 @@
 package analysis;
 
 import io.GzipReader;
+import io.ReadFile;
 import io.TxtUtils;
 import preprocess.Parser;
 import java.io.BufferedReader;
@@ -8,10 +9,40 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.jfree.chart.ChartUtilities;
 import twitter4j.JSONException;
 import twitter4j.JSONObject;
+import utils.Plotter;
 
-public class DistributionOverTime {
+public abstract class DistributionOverTime {
+
+    public static String RESOURCES_LOCATION = "src/main/resources/";
+
+    public static void plotHistogram(List<String> allHistLabels, List<double[]> tweetsTSDouble, int bins) {
+
+        Plotter plotter = new Plotter("Distribution of tweets over time", "Timestamp", "Frequency", allHistLabels, tweetsTSDouble, bins);
+        plotter.plot();
+    }
+
+    public static double[] loadHistogram(String filename) {
+
+        ArrayList<Long> tweetsTimestamps = null;
+
+        // read all the timestamps
+        try {
+            tweetsTimestamps = TxtUtils.txtToList(RESOURCES_LOCATION + filename, Long.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // convert the timestamps (long) to double
+        double[] tweetsTSDouble = new double[tweetsTimestamps.size()];
+        for (int i = 0; i < tweetsTimestamps.size(); i++) {
+            tweetsTSDouble[i] = tweetsTimestamps.get(i).doubleValue();
+        }
+
+        return tweetsTSDouble;
+    }
 
     public static void createHistogram(List<List> doubleList, String filePath) throws IOException {
         List<String> finalList = new ArrayList<>();
@@ -23,14 +54,6 @@ public class DistributionOverTime {
         System.out.print(finalList.size());
 
         TxtUtils.iterableToTxt(filePath, finalList);
-    }
-
-    public static File[] findFilesInDirectory(String directoryPath) {
-        // Finds all files and folders in a path and returns them
-        File folder = new File(directoryPath);
-
-        File[] files = folder.listFiles();
-        return files;
     }
 
     public static List<List<String>> getHistogram(String filenameTweets, String filenameYes, String filenameNo) throws IOException, JSONException {
@@ -80,8 +103,8 @@ public class DistributionOverTime {
         List<List> histogramYes = new ArrayList<>();
         List<List> histogramNo = new ArrayList<>();
         List<List<String>> histograms = new ArrayList<>();
-        String filePathYes = "src/main/resources/histogramYes.txt";
-        String filePathNo = "src/main/resources/histogramNo.txt";
+        String filePathYes = RESOURCES_LOCATION + "histogramYes.txt";
+        String filePathNo = RESOURCES_LOCATION + "histogramNo.txt";
 
         // it means that the user has provided a filename
         if (args.length != 0) {
@@ -90,13 +113,13 @@ public class DistributionOverTime {
             filenameNo = args[2];
 
         } else {
-            folderStream = "src/main/resources/sbn-data/stream";
-            filenameYes = "src/main/resources/yes_politicians.txt";
-            filenameNo = "src/main/resources/no_politicians.txt";
+            folderStream = RESOURCES_LOCATION + "sbn-data/stream";
+            filenameYes = RESOURCES_LOCATION + "yes_politicians.txt";
+            filenameNo = RESOURCES_LOCATION + "no_politicians.txt";
         }
 
         //Check where the tweets are
-        File[] folders = findFilesInDirectory(folderStream);
+        File[] folders = ReadFile.findFilesInDirectory(folderStream);
 
         // Enter in each folder
         int counter = 0;
@@ -110,7 +133,7 @@ public class DistributionOverTime {
             System.out.print(folder);
             System.out.println("");
             //find the tweet files here
-            File[] files = findFilesInDirectory(folder.getPath());
+            File[] files = ReadFile.findFilesInDirectory(folder.getPath());
 
             //go into each file
             for (File file : files) {
