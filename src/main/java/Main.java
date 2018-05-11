@@ -23,7 +23,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
         boolean createIndex = false;
-        boolean useCache = true;
+        boolean useCache = false;
         boolean plotTS = false;
         boolean calculateTopAuthorities = true;
         boolean printAuthorities = true;
@@ -53,9 +53,9 @@ public class Main {
         if (plotTS) {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
-        int graphSize = 100000; //16815933;
+        int graphSize = 16815933;
         WeightedDirectedGraph g = new WeightedDirectedGraph(graphSize + 1);
-        String graphFilename = "data.gz"; //"Official_SBN-ITA-2016-Net.gz";
+        String graphFilename = "Official_SBN-ITA-2016-Net.gz";
         LongIntDict mapLong2Int = new LongIntDict();
         GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
 
