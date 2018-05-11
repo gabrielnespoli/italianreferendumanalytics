@@ -4,7 +4,6 @@ import com.google.common.primitives.Ints;
 import io.ReadFile;
 import io.TxtUtils;
 import com.google.common.util.concurrent.AtomicDouble;
-import gnu.trove.iterator.TLongIntIterator;
 import gnu.trove.map.TIntLongMap;
 import index.IndexSearcher;
 import static io.TxtUtils.txtToList;
@@ -16,6 +15,7 @@ import it.stilo.g.algo.KppNeg;
 import it.stilo.g.algo.SubGraphByEdgesWeight;
 import it.stilo.g.structures.Core;
 import it.stilo.g.util.NodesMapper;
+import it.stilo.g.util.GraphWriter;
 import java.io.IOException;
 import java.util.List;
 import it.stilo.g.algo.SubGraph;
@@ -40,7 +40,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.ParseException;
-import utils.GraphUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 public abstract class GraphAnalysis {
@@ -335,8 +334,12 @@ public abstract class GraphAnalysis {
             TxtUtils.iterableToTxt(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", hmGroupType2Users.get("no"));
             TxtUtils.iterableToTxt(RESOURCES_LOCATION + "yes_unique_users_mention_politician.txt", hmGroupType2Users.get("yes"));
         } else {
-            hmGroupType2Users.put("no", TxtUtils.txtToSet(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt"));
-            hmGroupType2Users.put("yes", TxtUtils.txtToSet(RESOURCES_LOCATION + "yes_unique_users_mention_politician.txt"));
+            try {
+                hmGroupType2Users.put("no", new LinkedHashSet(txtToList(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", Integer.class)));
+                hmGroupType2Users.put("yes", new LinkedHashSet(txtToList(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", Integer.class)));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         // creates a unique set with all the unique users
@@ -357,6 +360,7 @@ public abstract class GraphAnalysis {
         // The SubGraph.extract() creates a graph of the same size as the old graph
         // and it raises an exception due to insufficient memory.
         // We had to resize the graph.
+        /*
         LongIntDict dictResize = new LongIntDict();
         g = GraphUtils.resizeGraph(g, dictResize, usersIDs.length);
         // map the id of the old big graph to the new ones
@@ -368,7 +372,7 @@ public abstract class GraphAnalysis {
             usersIDs[i] = iterator.value();
             i++;
         }
-
+         */
         // extract the largest connected component
         Set<Integer> setMaxCC = getMaxSet(ConnectedComponents.rootedConnectedComponents(g, usersIDs, runner));
         g = SubGraph.extract(g, Ints.toArray(setMaxCC), runner);
@@ -377,15 +381,19 @@ public abstract class GraphAnalysis {
         ArrayList<ArrayList<DoubleValues>> authorities = HubnessAuthority.compute(g, 0.00001, runner);
         ArrayList<DoubleValues> scores = authorities.get(0);
 
+        /*
         // map back the ids in 'score' to the previous id, before the resizing, then map back to the twitter ID
         ArrayList<DoubleValues> scoreMappedID = new ArrayList<>();
         TIntLongMap revDictResize = dictResize.getInverted();
         for (DoubleValues score : scores) {
             scoreMappedID.add(new DoubleValues((int) revDictResize.get(score.index), score.value));
         }
+         */
+        GraphWriter gw = new GraphWriter(g, RESOURCES_LOCATION + "graph_largest_cc_of_M.txt");
+        gw.save();
 
         // save the first topk authorities
-        TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_authorities.txt", scoreMappedID.subList(0, min(topk, scoreMappedID.size())));
+        TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_authorities.txt", scores.subList(0, min(topk, scores.size())));
     }
 
     public static void printSummaryAuthority(TIntLongMap mapIntToLong) throws IOException, ParseException, InterruptedException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {

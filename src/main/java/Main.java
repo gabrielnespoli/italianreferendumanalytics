@@ -25,10 +25,10 @@ public class Main {
         boolean createIndex = false;
         boolean useCache = true;
         boolean plotTS = false;
-        boolean calculateTopAuthorities = false;
-        boolean printAuthorities = false;
-        boolean calculateKplayers = true;
-        boolean printKplayers = true;
+        boolean calculateTopAuthorities = true;
+        boolean printAuthorities = true;
+        boolean calculateKplayers = false;
+        boolean printKplayers = false;
         double threshold = 0.07;
 
         ArrayList<String> usersList;
@@ -53,9 +53,9 @@ public class Main {
         if (plotTS) {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
-        int graphSize = 16815933;
+        int graphSize = 100000; //16815933;
         WeightedDirectedGraph g = new WeightedDirectedGraph(graphSize + 1);
-        String graphFilename = "Official_SBN-ITA-2016-Net.gz";
+        String graphFilename = "data.gz"; //"Official_SBN-ITA-2016-Net.gz";
         LongIntDict mapLong2Int = new LongIntDict();
         GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
 
