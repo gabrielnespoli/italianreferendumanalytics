@@ -97,7 +97,7 @@ public abstract class TemporalAnalysis {
         return termsList;
     }
 
-    // return an index in memory with the top N terms that are present in the index where the tweets are stores (the main index)
+    // return a list containing the N most frequent terms in the dictionary located in indexDirectory
     private static ArrayList<String> getNTopTermsIndex(int N, String indexDirectory) throws IOException, Exception {
         File indexFile = new File(indexDirectory);
         FSDirectory indexFSDirectory = FSDirectory.open(indexFile);
@@ -338,14 +338,21 @@ public abstract class TemporalAnalysis {
         long interval = c.getTime().getTime() - min;
 
         for (String prefix : prefixYesNo) {
+            
+            System.out.println("Creating the time series of the '" + prefix + "' group of supporters"); 
+            
             indexDirectory = INDEX_DIRECTORY + prefix + "_index";
             for (String clusterType : clusterTypes) {
                 clusterDirectory = RESOURCES_DIRECTORY + prefix + "_" + clusterType + ".txt";
                 clusters = GraphAnalysis.loadClusters(clusterDirectory);
 
+                System.out.println("Creating the time series of cluster type " + clusterType);
+                
                 // iterate through all the clusters plotting the time series of all terms in the cluster
                 for (Integer clusterID : clusters.keySet()) {
-
+                    
+                    System.out.println("Creating the time series of cluster " + clusterID + " of " + (clusters.keySet().size() - 1));
+                    
                     terms = new ArrayList<>(clusters.get(clusterID));
                     HashMap<String, double[]> hmTermsTS = createTermsTimeSeries(indexDirectory, terms, max, min, interval);
 
@@ -356,7 +363,7 @@ public abstract class TemporalAnalysis {
                     ArrayList<double[]> yvaluesList = dataToPlot.getRight();
                     graphTitle = "Evolution of terms frequency on time (parameters: " + prefix + ", " + clusterType + ")";
                     Plotter tsPlotter = new Plotter(graphTitle, labels, xvaluesList, yvaluesList);
-                    tsPlotter.plot();
+                    tsPlotter.savePlot(RESOURCES_DIRECTORY + "/images/" + prefix + "_" + clusterType + "_" + clusterID + ".PNG");
                 }
 
             }

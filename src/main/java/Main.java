@@ -20,13 +20,13 @@ import twitter4j.JSONException;
 public class Main {
 
     public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
-        boolean plotDistrTweets = true;
+        boolean plotDistrTweets = false;
         boolean createIndex = false;
         boolean useCache = false;
         boolean plotTS = false;
         boolean loadGraph = false;
-        boolean calculateTopAuthorities = true;
-        boolean printAuthorities = true;
+        boolean calculateTopAuthorities = false;
+        boolean printAuthorities = false;
         boolean calculateKplayers = false;
         boolean printKplayers = false;
         double threshold = 0.07;

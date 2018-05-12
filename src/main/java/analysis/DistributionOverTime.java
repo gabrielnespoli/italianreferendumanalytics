@@ -1,5 +1,6 @@
 package analysis;
 
+import static analysis.TemporalAnalysis.RESOURCES_DIRECTORY;
 import io.GzipReader;
 import io.ReadFile;
 import io.TxtUtils;
@@ -9,7 +10,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.jfree.chart.ChartUtilities;
 import twitter4j.JSONException;
 import twitter4j.JSONObject;
 import utils.Plotter;
@@ -19,9 +19,8 @@ public abstract class DistributionOverTime {
     public static String RESOURCES_LOCATION = "src/main/resources/";
 
     public static void plotHistogram(List<String> allHistLabels, List<double[]> tweetsTSDouble, int bins) {
-
         Plotter plotter = new Plotter("Distribution of tweets over time", "Timestamp", "Frequency", allHistLabels, tweetsTSDouble, bins);
-        plotter.plot();
+        plotter.savePlot(RESOURCES_DIRECTORY + "/images/histogram.PNG");
     }
 
     public static double[] loadHistogram(String filename) {

@@ -4,13 +4,16 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Paint;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
-import javax.swing.JFrame;
-import javax.swing.SwingUtilities;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
+import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.block.BlockBorder;
 import org.jfree.chart.plot.DefaultDrawingSupplier;
@@ -24,7 +27,7 @@ import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
-public class Plotter extends JFrame {
+public class Plotter {
 
     private ArrayList<double[]> xvaluesList;
     private ArrayList<double[]> yvaluesList;
@@ -36,6 +39,7 @@ public class Plotter extends JFrame {
     private String xaxis;
     private String yaxis;
     private JFreeChart chart;
+    private ChartPanel chartPanel;
 
     public Plotter(String title, ArrayList<String> labels, ArrayList<double[]> xvaluesList, ArrayList<double[]> yvaluesList) {
 
@@ -47,7 +51,7 @@ public class Plotter extends JFrame {
         this.labels = labels;
         this.xvaluesList = xvaluesList;
         this.yvaluesList = yvaluesList;
-        initUITS();
+        createChartTS();
     }
 
     public Plotter(String title, String xaxis, String yaxis, List<String> allHistLabels, List<double[]> histValues, int bins) {
@@ -57,24 +61,15 @@ public class Plotter extends JFrame {
         this.bins = bins;
         this.xaxis = xaxis;
         this.yaxis = yaxis;
-        initUIHist();
+        createChartHist();
     }
 
     public JFreeChart getChart() {
         return this.chart;
     }
-    
-    // initialize variables to plot the timeseries
-    private void initUITS() {
-
-        XYDataset dataset = createTSDataset();
-        this.chart = createTSChart(dataset);
-        initFrame();
-    }
 
     // initialize variables to plot the histogram
-    private void initUIHist() {
-
+    private void createChartHist() {
         HistogramDataset dataset = new HistogramDataset();
         dataset.setType(HistogramType.FREQUENCY);
 
@@ -88,7 +83,7 @@ public class Plotter extends JFrame {
         boolean urls = false;
         this.chart = ChartFactory.createHistogram(this.title, this.xaxis, this.yaxis,
                 dataset, orientation, show, toolTips, urls);
-        
+
         // change the colors to translucid
         XYPlot plot = this.chart.getXYPlot();
         Paint[] paintArray = null;
@@ -103,20 +98,14 @@ public class Plotter extends JFrame {
                 DefaultDrawingSupplier.DEFAULT_STROKE_SEQUENCE,
                 DefaultDrawingSupplier.DEFAULT_OUTLINE_STROKE_SEQUENCE,
                 DefaultDrawingSupplier.DEFAULT_SHAPE_SEQUENCE));
-        
-        initFrame();
+        createPanel();
     }
 
-    private void initFrame() {
-        ChartPanel chartPanel = new ChartPanel(chart);
-        chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        chartPanel.setBackground(Color.white);
-        add(chartPanel);
-
-        pack();
-        setTitle("Line chart");
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    // initialize variables to plot the timeseries
+    private void createChartTS() {
+        XYDataset dataset = createTSDataset();
+        this.chart = buildTSChart(dataset);
+        createPanel();
     }
 
     /*
@@ -147,7 +136,7 @@ public class Plotter extends JFrame {
         return dataset;
     }
 
-    private JFreeChart createTSChart(XYDataset dataset) {
+    private JFreeChart buildTSChart(XYDataset dataset) {
 
         JFreeChart chart = ChartFactory.createXYLineChart(
                 this.title,
@@ -185,12 +174,27 @@ public class Plotter extends JFrame {
                 new Font("Serif", java.awt.Font.BOLD, 16)));
 
         return chart;
-
     }
 
-    public void plot() {
-        SwingUtilities.invokeLater(() -> {
-            this.setVisible(true);
-        });
+    private void createPanel() {
+        this.chartPanel = new ChartPanel(this.chart);
+        this.chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        this.chartPanel.setBackground(Color.white);
+    }
+
+    public void savePlot(String filename) {
+        try {
+            OutputStream out = new FileOutputStream(new File(filename));
+
+            ChartUtilities.writeChartAsPNG(
+                    out,
+                    this.chart,
+                    600,
+                    400);
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
     }
 }
