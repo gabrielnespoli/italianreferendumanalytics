@@ -486,7 +486,7 @@ public abstract class GraphAnalysis {
         g = SubGraph.extract(g, subGraphNodes.stream().mapToInt(i -> i).toArray(), runner);
 
         long start = System.currentTimeMillis();
-        List<DoubleValues> brokers = KppNeg.searchBroker(g, nodes, runner); //subGraphNodes.stream().mapToInt(i -> i).toArray()
+        List<DoubleValues> brokers = KppNeg.searchBroker(g, g.getVertex(), runner); //subGraphNodes.stream().mapToInt(i -> i).toArray()
         long end = System.currentTimeMillis();
         System.out.println("Took : " + ((end - start) / 1000) + " seconds");
 
