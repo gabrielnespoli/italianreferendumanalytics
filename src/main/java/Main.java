@@ -1,4 +1,5 @@
 
+import analysis.CoocurrenceGraph;
 import analysis.DistributionOverTime;
 import analysis.GraphAnalysis;
 import static analysis.GraphAnalysis.RESOURCES_LOCATION;
@@ -22,22 +23,25 @@ public class Main {
     public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
         boolean plotDistrTweets = false;
         boolean createIndex = false;
+        boolean clusterTopTerms = false;
+        boolean generateCoocurrenceGraph = false;
+        boolean extractKCoreCC = false;
         boolean useCache = false;
         boolean plotTS = false;
         boolean loadGraph = false;
-        boolean calculateTopAuthorities = false;
-        boolean printAuthorities = false;
-        boolean calculateKplayers = false;
-        boolean printKplayers = false;
+        boolean calculateTopAuthorities = true;
+        boolean printAuthorities = true;
+        boolean calculateKplayers = true;
+        boolean printKplayers = true;
         double threshold = 0.07;
 
         String[] prefixYesNo = {"yes", "no"};
-        
+
         if (plotDistrTweets) {
             List<double[]> histValues = new ArrayList<>();
             histValues.add(DistributionOverTime.loadHistogram("histogramYes.txt"));
             histValues.add(DistributionOverTime.loadHistogram("histogramNo.txt"));
-            DistributionOverTime.plotHistogram( Arrays.asList(prefixYesNo), histValues, 20);
+            DistributionOverTime.plotHistogram(Arrays.asList(prefixYesNo), histValues, 20);
         }
 
         ArrayList<String> usersList;
@@ -51,13 +55,19 @@ public class Main {
             IndexBuilder.createYesNoIndex();
         }
 
-        /*
-        
-        TemporalAnalysis.clusterTopNTerms(1000, 12, 20);
-        CoocurrenceGraph.generateCoocurrenceGraph();
-        GraphAnalysis.extractKCoreAndConnectedComponent(threshold);
-         */
-        
+        if (clusterTopTerms) {
+            TemporalAnalysis.clusterTopNTerms(1000, 12, 20);
+
+        }
+
+        if (generateCoocurrenceGraph) {
+            CoocurrenceGraph.generateCoocurrenceGraph();
+        }
+
+        if (extractKCoreCC) {
+            GraphAnalysis.extractKCoreAndConnectedComponent(threshold);
+        }
+
         String[] clusterTypes = {"kcore", "largestcc"};
         if (plotTS) {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);

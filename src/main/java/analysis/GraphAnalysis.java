@@ -473,6 +473,9 @@ public abstract class GraphAnalysis {
     public static void saveTopKPlayers(WeightedDirectedGraph g, int[] nodes, LongIntDict mapLong2Int, int topk, int threshold) throws InterruptedException, IOException, ParseException {
         ArrayList<Integer> subGraphNodes = new ArrayList<>();
 
+        // extract just the graph induced by nodes.
+        g = SubGraph.extract(g, nodes, runner);
+        
         // iterate through the graph and add to a list just the nodes with high degree
         for (int i = 1; i < g.in.length; i++) {
             if (g.in[i] != null && g.in[i].length >= threshold) {
