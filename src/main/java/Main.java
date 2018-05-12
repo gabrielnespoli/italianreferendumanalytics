@@ -28,7 +28,6 @@ public class Main {
         boolean extractKCoreCC = false;
         boolean useCache = false;
         boolean plotTS = false;
-        boolean loadGraph = false;
         boolean calculateTopAuthorities = true;
         boolean printAuthorities = true;
         boolean calculateKplayers = true;
@@ -73,15 +72,11 @@ public class Main {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
 
-        WeightedDirectedGraph g = null;
-        LongIntDict mapLong2Int = null;
-        if (loadGraph) {
-            int graphSize = 16815933;
-            g = new WeightedDirectedGraph(graphSize + 1);
-            String graphFilename = "Official_SBN-ITA-2016-Net.gz";
-            mapLong2Int = new LongIntDict();
-            GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
-        }
+        int graphSize = 16815933;
+        WeightedDirectedGraph g = new WeightedDirectedGraph(graphSize + 1);
+        String graphFilename = "Official_SBN-ITA-2016-Net.gz";
+        LongIntDict mapLong2Int = new LongIntDict();
+        GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
 
         if (calculateTopAuthorities) {
             GraphAnalysis.saveTopKAuthorities(g, mapLong2Int, 1000, useCache);
