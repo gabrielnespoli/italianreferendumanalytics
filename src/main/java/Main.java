@@ -6,19 +6,25 @@ import static analysis.GraphAnalysis.RESOURCES_LOCATION;
 import analysis.TemporalAnalysis;
 import index.IndexBuilder;
 import index.IndexSearcher;
+import io.ReadFile;
 import static io.TxtUtils.txtToList;
 import it.stilo.g.structures.LongIntDict;
 import it.stilo.g.structures.WeightedDirectedGraph;
 import it.stilo.g.util.GraphReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.zip.GZIPInputStream;
 import org.apache.lucene.document.Document;
 import twitter4j.JSONException;
 
 public class Main {
+
+    public static int runner = (int) (Runtime.getRuntime().availableProcessors());
 
     public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
         boolean plotDistrTweets = false;
@@ -72,9 +78,9 @@ public class Main {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
 
-        int graphSize = 16815933;
+        int graphSize = 1000000; //16815933;
         WeightedDirectedGraph g = new WeightedDirectedGraph(graphSize + 1);
-        String graphFilename = "Official_SBN-ITA-2016-Net.gz";
+        String graphFilename = "data.gz"; //"Official_SBN-ITA-2016-Net.gz";
         LongIntDict mapLong2Int = new LongIntDict();
         GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
 
@@ -87,6 +93,12 @@ public class Main {
         }
 
         if (calculateKplayers) {
+            String mGraphFilename = RESOURCES_LOCATION + "graph_largest_cc_of_M.gz";
+            GZIPInputStream gzipIS = new GZIPInputStream(new FileInputStream(mGraphFilename));
+            graphSize = (int) ReadFile.getLineCount(gzipIS);
+            g = new WeightedDirectedGraph(graphSize + 1);
+            GraphReader gr = new GraphReader(g, mGraphFilename, new CountDownLatch(runner));
+            gr.run();
             for (String supportType : prefixYesNo) {
                 usersList = txtToList(RESOURCES_LOCATION + supportType + "_M.txt", String.class); // retrieve the users names
                 nodes = new int[usersList.size()];

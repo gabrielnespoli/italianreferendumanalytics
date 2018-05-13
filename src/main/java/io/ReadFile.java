@@ -10,10 +10,34 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
 
 public class ReadFile {
+
+    public static long getLineCount(File file) throws IOException {
+
+        try (Stream<String> lines = Files.lines(file.toPath())) {
+            return lines.count();
+        }
+    }
+    
+    public static long getLineCount(GZIPInputStream gzipIS) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(gzipIS));
+
+        String line;
+        long countLine = 0;
+        while ((line = br.readLine()) != null) {
+            countLine++;
+        }
+        return countLine;
+    }
+    
+
 
     public String[] readLines(String filename) throws IOException {
         FileReader fileReader = new FileReader(filename);

@@ -4,6 +4,7 @@ import com.google.common.primitives.Ints;
 import io.ReadFile;
 import io.TxtUtils;
 import com.google.common.util.concurrent.AtomicDouble;
+import gnu.trove.iterator.TLongIntIterator;
 import gnu.trove.map.TIntLongMap;
 import index.IndexSearcher;
 import static io.TxtUtils.txtToList;
@@ -41,6 +42,7 @@ import java.util.Set;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import utils.GraphUtils;
 
 public abstract class GraphAnalysis {
 
@@ -316,7 +318,7 @@ public abstract class GraphAnalysis {
                 counter = 0.0;
 
                 for (String row : userMentionPolitician) {
-                    System.out.println(counter / userMentionPolitician.size() * 100.0 + " % Done");
+                    System.out.println("Calculating authorities: " + counter / userMentionPolitician.size() * 100.0 + " % Done");
                     counter += 1.0;
 
                     username = row.split(" ")[0];  // get the user screen name
@@ -359,8 +361,7 @@ public abstract class GraphAnalysis {
 
         // The SubGraph.extract() creates a graph of the same size as the old graph
         // and it raises an exception due to insufficient memory.
-        // We had to resize the graph.
-        /*
+        // We had to resize the graph.   
         LongIntDict dictResize = new LongIntDict();
         g = GraphUtils.resizeGraph(g, dictResize, usersIDs.length);
         // map the id of the old big graph to the new ones
@@ -372,7 +373,7 @@ public abstract class GraphAnalysis {
             usersIDs[i] = iterator.value();
             i++;
         }
-         */
+        
         // extract the largest connected component
         Set<Integer> setMaxCC = getMaxSet(ConnectedComponents.rootedConnectedComponents(g, usersIDs, runner));
         g = SubGraph.extract(g, Ints.toArray(setMaxCC), runner);
@@ -381,17 +382,16 @@ public abstract class GraphAnalysis {
         ArrayList<ArrayList<DoubleValues>> authorities = HubnessAuthority.compute(g, 0.00001, runner);
         ArrayList<DoubleValues> scores = authorities.get(0);
 
-        /*
         // map back the ids in 'score' to the previous id, before the resizing, then map back to the twitter ID
         ArrayList<DoubleValues> scoreMappedID = new ArrayList<>();
         TIntLongMap revDictResize = dictResize.getInverted();
         for (DoubleValues score : scores) {
             scoreMappedID.add(new DoubleValues((int) revDictResize.get(score.index), score.value));
         }
-         */
-        GraphWriter gw = new GraphWriter(g, RESOURCES_LOCATION + "graph_largest_cc_of_M.txt");
-        gw.save();
-
+        scores = scoreMappedID;
+        
+        GraphWriter.saveDirectGraph(g, RESOURCES_LOCATION + "graph_largest_cc_of_M.gz", null);
+        
         // save the first topk authorities
         TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_authorities.txt", scores.subList(0, min(topk, scores.size())));
     }
