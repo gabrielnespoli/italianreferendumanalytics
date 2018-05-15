@@ -7,19 +7,21 @@ import analysis.TemporalAnalysis;
 import index.IndexBuilder;
 import index.IndexSearcher;
 import io.ReadFile;
+import io.TxtUtils;
 import static io.TxtUtils.txtToList;
 import it.stilo.g.structures.LongIntDict;
 import it.stilo.g.structures.WeightedDirectedGraph;
 import it.stilo.g.util.GraphReader;
 import java.io.FileInputStream;
 import java.io.IOException;
+import static java.lang.Integer.min;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.zip.GZIPInputStream;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.lucene.document.Document;
 import structure.MappedWeightedGraph;
 import twitter4j.JSONException;
@@ -36,10 +38,10 @@ public class Main {
         boolean extractKCoreCC = false;
         boolean useCache = true;
         boolean plotTS = false;
-        boolean calculateTopAuthorities = true;
-        boolean printAuthorities = true;
-        boolean calculateKplayers = false;
-        boolean printKplayers = false;
+        boolean loadGraph = false;
+        boolean calculateTopAuthorities = false;
+        boolean printAuthorities = false;
+        boolean calculateKplayers = true;
         double threshold = 0.07;
 
         String[] prefixYesNo = {"yes", "no"};
@@ -80,11 +82,17 @@ public class Main {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
 
-        int graphSize =  16815933;
-        WeightedDirectedGraph g = new WeightedDirectedGraph(graphSize + 1);
-        String graphFilename = "Official_SBN-ITA-2016-Net.gz";
-        LongIntDict mapLong2Int = new LongIntDict();
-        GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
+        WeightedDirectedGraph g = null;
+        LongIntDict mapLong2Int = null;
+        int graphSize = 0;
+        String graphFilename = "";
+        if (loadGraph) {
+            graphSize = 16815933;
+            g = new WeightedDirectedGraph(graphSize + 1);
+            graphFilename = "Official_SBN-ITA-2016-Net.gz";
+            mapLong2Int = new LongIntDict();
+            GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
+        }
 
         if (calculateTopAuthorities) {
             LinkedHashSet<Integer> users = GraphAnalysis.getUsersMentionedPolitician(useCache, mapLong2Int);
@@ -95,22 +103,23 @@ public class Main {
                 usersIDs[i] = userId;
                 i++;
             }
-            
+
             MappedWeightedGraph gmap = GraphAnalysis.extractLargestCCofM(g, usersIDs, mapLong2Int);
             GraphAnalysis.saveTopKAuthorities(gmap, users, mapLong2Int, 1000, useCache);
         }
 
         if (printAuthorities) {
-            GraphAnalysis.printSummaryAuthority(mapLong2Int.getInverted());
+            GraphAnalysis.printAuthorities(mapLong2Int.getInverted());
         }
 
         if (calculateKplayers) {
-            String mGraphFilename = RESOURCES_LOCATION + "graph_largest_cc_of_M.gz";
-            GZIPInputStream gzipIS = new GZIPInputStream(new FileInputStream(mGraphFilename));
+            graphFilename = RESOURCES_LOCATION + "graph_largest_cc_of_M.gz";
+            GZIPInputStream gzipIS = new GZIPInputStream(new FileInputStream(graphFilename));
             graphSize = (int) ReadFile.getLineCount(gzipIS);
             g = new WeightedDirectedGraph(graphSize + 1);
-            GraphReader gr = new GraphReader(g, mGraphFilename, new CountDownLatch(runner));
-            gr.run();
+            mapLong2Int = new LongIntDict();
+            GraphReader.readGraphLong2IntRemap(g, graphFilename, mapLong2Int, false);
+
             for (String supportType : prefixYesNo) {
                 usersList = txtToList(RESOURCES_LOCATION + supportType + "_M.txt", String.class); // retrieve the users names
                 nodes = new int[usersList.size()];
@@ -126,12 +135,11 @@ public class Main {
                     }
                     i++;
                 }
-                GraphAnalysis.saveTopKPlayers(g, nodes, mapLong2Int, 500, 1);
+                
+                List<ImmutablePair> brokersUsername = GraphAnalysis.getTopKPlayers(g, nodes, mapLong2Int, 500, 1);
+                // save the first topk authorities
+                TxtUtils.iterableToTxt(RESOURCES_LOCATION + supportType + "_top_k_players.txt", brokersUsername);
             }
-        }
-
-        if (printKplayers) {
-            GraphAnalysis.printTopKPlayers(mapLong2Int.getInverted());
         }
     }
 }

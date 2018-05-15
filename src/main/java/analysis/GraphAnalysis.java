@@ -405,7 +405,7 @@ public abstract class GraphAnalysis {
         TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_authorities.txt", scores.subList(0, min(topk, scores.size())));
     }
 
-    public static void printSummaryAuthority(TIntLongMap mapIntToLong) throws IOException, ParseException, InterruptedException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+    public static void printAuthorities(TIntLongMap mapIntToLong) throws IOException, ParseException, InterruptedException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 
         ArrayList<Integer> yesUniqueUsersMentionPolitician = txtToList(RESOURCES_LOCATION + "yes_unique_users_mention_politician.txt", Integer.class);
         ArrayList<Integer> noUniqueUsersMentionPolitician = txtToList(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", Integer.class);
@@ -479,7 +479,7 @@ public abstract class GraphAnalysis {
     and finally calculate their reachability using the KppNeg algorithm. The top 500 
     players are saved in disk
      */
-    public static void saveTopKPlayers(WeightedDirectedGraph g, int[] nodes, LongIntDict mapLong2Int, int topk, int threshold) throws InterruptedException, IOException, ParseException {
+    public static List<ImmutablePair> getTopKPlayers(WeightedDirectedGraph g, int[] nodes, LongIntDict mapLong2Int, int topk, int threshold) throws InterruptedException, IOException, ParseException {
         ArrayList<Integer> subGraphNodes = new ArrayList<>();
 
         // extract just the graph induced by nodes.
@@ -487,7 +487,7 @@ public abstract class GraphAnalysis {
 
         // iterate through the graph and add to a list just the nodes with high degree
         for (int i = 1; i < g.out.length; i++) {
-            if (g.out[i] != null && g.out[i].length >= threshold) {
+            if ((g.out[i] != null && g.out[i].length >= threshold) || (g.in[i] != null && g.in[i].length >= threshold)) {
                 subGraphNodes.add(i);
             }
         }
@@ -501,7 +501,7 @@ public abstract class GraphAnalysis {
 
         // convert from the node position of the graph into the TwitterID, and then
         // to the Twitter name
-        ArrayList<ImmutablePair> brokersUsername = new ArrayList<>();
+        List<ImmutablePair> brokersUsername = new ArrayList<>();
         TIntLongMap mapIntToLong = mapLong2Int.getInverted();
         long twitterID;
         Document[] docs;
@@ -523,14 +523,8 @@ public abstract class GraphAnalysis {
 
             }
         }
-        // save the first topk authorities
-        TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_k_players.txt", brokersUsername.subList(0, min(topk, brokersUsername.size())));
+
+        return brokersUsername.subList(0, min(topk, brokersUsername.size()));
     }
 
-    public static void printTopKPlayers(TIntLongMap mapIntToLong) throws Exception {
-        ArrayList<String> topKPlayers = TxtUtils.txtToList(RESOURCES_LOCATION + "top_k_players.txt", String.class);
-        for (String player : topKPlayers) {
-            System.out.println(player);
-        }
-    }
 }
