@@ -16,10 +16,12 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.zip.GZIPInputStream;
 import org.apache.lucene.document.Document;
+import structure.MappedWeightedGraph;
 import twitter4j.JSONException;
 
 public class Main {
@@ -32,12 +34,12 @@ public class Main {
         boolean clusterTopTerms = false;
         boolean generateCoocurrenceGraph = false;
         boolean extractKCoreCC = false;
-        boolean useCache = false;
+        boolean useCache = true;
         boolean plotTS = false;
         boolean calculateTopAuthorities = true;
         boolean printAuthorities = true;
-        boolean calculateKplayers = true;
-        boolean printKplayers = true;
+        boolean calculateKplayers = false;
+        boolean printKplayers = false;
         double threshold = 0.07;
 
         String[] prefixYesNo = {"yes", "no"};
@@ -78,14 +80,24 @@ public class Main {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
 
-        int graphSize = 1000000; //16815933;
+        int graphSize =  16815933;
         WeightedDirectedGraph g = new WeightedDirectedGraph(graphSize + 1);
-        String graphFilename = "data.gz"; //"Official_SBN-ITA-2016-Net.gz";
+        String graphFilename = "Official_SBN-ITA-2016-Net.gz";
         LongIntDict mapLong2Int = new LongIntDict();
         GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
 
         if (calculateTopAuthorities) {
-            GraphAnalysis.saveTopKAuthorities(g, mapLong2Int, 1000, useCache);
+            LinkedHashSet<Integer> users = GraphAnalysis.getUsersMentionedPolitician(useCache, mapLong2Int);
+            // convert the set to array of int, needed by the method "SubGraph.extract"
+            int[] usersIDs = new int[users.size()];
+            i = 0;
+            for (Integer userId : users) {
+                usersIDs[i] = userId;
+                i++;
+            }
+            
+            MappedWeightedGraph gmap = GraphAnalysis.extractLargestCCofM(g, usersIDs, mapLong2Int);
+            GraphAnalysis.saveTopKAuthorities(gmap, users, mapLong2Int, 1000, useCache);
         }
 
         if (printAuthorities) {
@@ -114,7 +126,7 @@ public class Main {
                     }
                     i++;
                 }
-                GraphAnalysis.saveTopKPlayers(g, Arrays.copyOfRange(nodes, 0, 100), mapLong2Int, 500, 200);
+                GraphAnalysis.saveTopKPlayers(g, nodes, mapLong2Int, 500, 1);
             }
         }
 

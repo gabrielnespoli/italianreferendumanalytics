@@ -16,7 +16,6 @@ import it.stilo.g.algo.KppNeg;
 import it.stilo.g.algo.SubGraphByEdgesWeight;
 import it.stilo.g.structures.Core;
 import it.stilo.g.util.NodesMapper;
-import it.stilo.g.util.GraphWriter;
 import java.io.IOException;
 import java.util.List;
 import it.stilo.g.algo.SubGraph;
@@ -24,6 +23,7 @@ import it.stilo.g.algo.UnionDisjoint;
 import it.stilo.g.structures.DoubleValues;
 import it.stilo.g.structures.LongIntDict;
 import it.stilo.g.structures.WeightedDirectedGraph;
+import it.stilo.g.structures.WeightedGraph;
 import it.stilo.g.structures.WeightedUndirectedGraph;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -42,6 +42,8 @@ import java.util.Set;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import structure.MappedWeightedGraph;
+import structure.ReadTxtException;
 import utils.GraphUtils;
 
 public abstract class GraphAnalysis {
@@ -294,14 +296,13 @@ public abstract class GraphAnalysis {
         return hmClusterIDTerms;
     }
 
-    public static void saveTopKAuthorities(WeightedDirectedGraph g, LongIntDict mapLong2Int, int topk, boolean useCache) throws IOException, ParseException, InterruptedException {
-
-        String username;
-        long id;
-        Document[] docs;
+    public static LinkedHashSet<Integer> getUsersMentionedPolitician(boolean useCache, LongIntDict mapLong2Int) throws ReadTxtException, ParseException, IOException {
         HashMap<String, LinkedHashSet<Integer>> hmGroupType2Users = new HashMap<>(); //data structure that will keep the two sets of users (for yes and no group)
         List<String> userMentionPolitician;
         double counter;
+        String username;
+        long id;
+        Document[] docs;
 
         if (!useCache) {
             // iterate through the yes and no group extracting all the users that mentioned
@@ -331,16 +332,16 @@ public abstract class GraphAnalysis {
                 }
                 hmGroupType2Users.put(typeGroup, usersUnique);
             }
-
             // save the set of users
             TxtUtils.iterableToTxt(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", hmGroupType2Users.get("no"));
             TxtUtils.iterableToTxt(RESOURCES_LOCATION + "yes_unique_users_mention_politician.txt", hmGroupType2Users.get("yes"));
+
         } else {
             try {
                 hmGroupType2Users.put("no", new LinkedHashSet(txtToList(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", Integer.class)));
                 hmGroupType2Users.put("yes", new LinkedHashSet(txtToList(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", Integer.class)));
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception ex) {
+                throw new ReadTxtException();
             }
         }
 
@@ -348,15 +349,12 @@ public abstract class GraphAnalysis {
         LinkedHashSet<Integer> users = new LinkedHashSet<>(hmGroupType2Users.get("no"));
         users.addAll(hmGroupType2Users.get("yes"));
 
-        // convert the set to array of int, needed by the method "SubGraph.extract"
-        int[] usersIDs = new int[users.size()];
-        int i = 0;
-        for (Integer userId : users) {
-            usersIDs[i] = userId;
-            i++;
-        }
+        return users;
+    }
 
+    public static MappedWeightedGraph extractLargestCCofM(WeightedDirectedGraph g, int[] usersIDs, LongIntDict mapLong2Int) throws InterruptedException, IOException {
         // extract the subgraph induced by the users that mentioned the politicians
+        System.out.println("Extracting the subgraph induced by M");
         g = SubGraph.extract(g, usersIDs, runner);
 
         // The SubGraph.extract() creates a graph of the same size as the old graph
@@ -365,18 +363,31 @@ public abstract class GraphAnalysis {
         LongIntDict dictResize = new LongIntDict();
         g = GraphUtils.resizeGraph(g, dictResize, usersIDs.length);
         // map the id of the old big graph to the new ones
-        usersIDs = new int[users.size()];
-        i = 0;
+        usersIDs = new int[usersIDs.length];
+        int i = 0;
         TLongIntIterator iterator = dictResize.getIterator();
         while (iterator.hasNext()) {
             iterator.advance();
             usersIDs[i] = iterator.value();
             i++;
         }
-        
+
         // extract the largest connected component
+        System.out.println("Extracting the largest connected component of the subgraph induced by M");
         Set<Integer> setMaxCC = getMaxSet(ConnectedComponents.rootedConnectedComponents(g, usersIDs, runner));
         g = SubGraph.extract(g, Ints.toArray(setMaxCC), runner);
+
+        // save the largest CC of M
+        System.out.println("Saving the graph");
+        TIntLongMap revDictResize = dictResize.getInverted();
+        GraphUtils.saveDirectGraph2Mappings(g, RESOURCES_LOCATION + "graph_largest_cc_of_M.gz", revDictResize, mapLong2Int.getInverted());
+
+        return new MappedWeightedGraph(g, revDictResize);
+    }
+
+    public static void saveTopKAuthorities(MappedWeightedGraph gmap, LinkedHashSet<Integer> users, LongIntDict mapLong2Int, int topk, boolean useCache) throws InterruptedException, IOException {
+        WeightedGraph g = gmap.getWeightedGraph();
+        TIntLongMap mapInt2Long = gmap.getMap();
 
         // get the authorities
         ArrayList<ArrayList<DoubleValues>> authorities = HubnessAuthority.compute(g, 0.00001, runner);
@@ -384,14 +395,12 @@ public abstract class GraphAnalysis {
 
         // map back the ids in 'score' to the previous id, before the resizing, then map back to the twitter ID
         ArrayList<DoubleValues> scoreMappedID = new ArrayList<>();
-        TIntLongMap revDictResize = dictResize.getInverted();
         for (DoubleValues score : scores) {
-            scoreMappedID.add(new DoubleValues((int) revDictResize.get(score.index), score.value));
+            scoreMappedID.add(new DoubleValues((int) mapInt2Long.get(score.index), score.value));
         }
+
         scores = scoreMappedID;
-        
-        GraphWriter.saveDirectGraph(g, RESOURCES_LOCATION + "graph_largest_cc_of_M.gz", null);
-        
+
         // save the first topk authorities
         TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_authorities.txt", scores.subList(0, min(topk, scores.size())));
     }
@@ -475,10 +484,10 @@ public abstract class GraphAnalysis {
 
         // extract just the graph induced by nodes.
         g = SubGraph.extract(g, nodes, runner);
-        
+
         // iterate through the graph and add to a list just the nodes with high degree
-        for (int i = 1; i < g.in.length; i++) {
-            if (g.in[i] != null && g.in[i].length >= threshold) {
+        for (int i = 1; i < g.out.length; i++) {
+            if (g.out[i] != null && g.out[i].length >= threshold) {
                 subGraphNodes.add(i);
             }
         }
