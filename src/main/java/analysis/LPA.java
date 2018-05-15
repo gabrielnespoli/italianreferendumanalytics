@@ -92,9 +92,9 @@ public class LPA {
         ZacharyNetwork.generate(g, 2);
 
         // Indices of nodes from group 1 (seeds)
-        int[] seedsYes = new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+        int[] seedsYes = new int[]{1, 2, 3, 4, 5, 6, 7};
         // Indices of nodes of group 2
-        int[] seedsNo = new int[]{11, 12, 13, 14, 15, 16, 17, 32};
+        int[] seedsNo = new int[]{14, 15, 16, 17, 32};
         // the rest of the nodes will be labeled with unique labels
         ArrayList<Integer> tmp = new ArrayList<Integer>();
         //int[] seedsUnknown = new int[g.size - seedsYes.length- seedsNo.length - 1];
@@ -144,6 +144,14 @@ public class LPA {
         int counter = 0;
         int killAt = 1000;
 
+        // Store here the temporal labels
+        ArrayList<Integer> yesCounterOverTime = new ArrayList<Integer>();
+        ArrayList<Integer> noCounterOverTime = new ArrayList<Integer>();
+        ArrayList<Integer> unknownCounterOverTime = new ArrayList<Integer>();
+        yesCounterOverTime.add(seedsYes.length);
+            noCounterOverTime.add(seedsNo.length);
+            unknownCounterOverTime.add(seedsUnknown.length);
+
         // change this when convergence is done or killAt < counter
         boolean stop = false;
         int newLabelNode;
@@ -153,6 +161,21 @@ public class LPA {
 
             // shuffle first
             shuffleArray(nodes);
+
+            // print counters of this iteration
+            System.out.println("Iteration " + counter + " counting...");
+            int lenthis = yesCounterOverTime.size() - 1;
+            System.out.println("Yes labels: " + yesCounterOverTime.get(lenthis));
+            lenthis = noCounterOverTime.size() - 1;
+            System.out.println("No labels: " + noCounterOverTime.get(lenthis));
+            lenthis = unknownCounterOverTime.size() - 1;
+            System.out.println("Unknown labels: " + unknownCounterOverTime.get(lenthis));
+            System.out.println("");
+
+            // start the counters for the new iteration
+            yesCounterOverTime.add(0);
+            noCounterOverTime.add(0);
+            unknownCounterOverTime.add(0);
 
             // go to each node
             for (int k = 0; k < nodes.length; k++) {
@@ -188,6 +211,24 @@ public class LPA {
 
                 // Update the label
                 nodesLabels.replace(node, newLabelNode);
+
+                // modify temporal counter
+                if (newLabelNode == -1) {
+                    int len = yesCounterOverTime.size() - 1;
+                    int counterLast = yesCounterOverTime.get(len);
+                    yesCounterOverTime.remove(len);
+                    yesCounterOverTime.add(counterLast + 1);
+                } else if (newLabelNode == -2) {
+                    int len = noCounterOverTime.size() - 1;
+                    int counterLast = noCounterOverTime.get(len);
+                    noCounterOverTime.remove(len);
+                    noCounterOverTime.add(counterLast + 1);
+                } else {
+                    int len = unknownCounterOverTime.size() - 1;
+                    int counterLast = unknownCounterOverTime.get(len);
+                    unknownCounterOverTime.remove(len);
+                    unknownCounterOverTime.add(counterLast + 1);
+                }
             }
             // check convergence
             if (counterConvergence == nodes.length) {
@@ -198,6 +239,7 @@ public class LPA {
                 System.out.println("Did not converge yet after steps: " + counter);
                 stop = true;
             }
+
         }
 
         int counterYes = 0;
