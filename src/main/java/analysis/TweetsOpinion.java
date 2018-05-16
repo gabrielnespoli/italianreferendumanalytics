@@ -420,7 +420,7 @@ public class TweetsOpinion {
 
         // Part 1.1
         // Find the number of times the users mention the politicians or the words of the clusters, this has to be ran only once
-        
+        /*uncomment
         Map<String, Integer> mapYesPoliticians = new HashMap<String, Integer>();
         Map<String, Integer> mapYesWords = new HashMap<String, Integer>();
         
@@ -458,12 +458,12 @@ public class TweetsOpinion {
         // and an other file that is <user> <politician> <number of times mentioned>
         // Uncomment to create the list of users who mention yes or no politicians
         
-        System.out.println("#### YES");
+        //System.out.println("#### YES");
         findSupporters("src/main/resources/yes_politicians.txt", "src/main/resources/yes_users_mention_politicians.txt", "src/main/resources/yes_map_users_mention_politicians.txt");
 
-        System.out.println("#### NO");
+        //System.out.println("#### NO");
         findSupporters("src/main/resources/no_politicians.txt", "src/main/resources/no_users_mention_politicians.txt", "src/main/resources/no_map_users_mention_politicians.txt");
-         
+         */
         // Part 1.3 
         hubnessGraph13();
 
