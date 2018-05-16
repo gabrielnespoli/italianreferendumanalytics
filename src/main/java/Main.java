@@ -3,6 +3,7 @@ import analysis.CoocurrenceGraph;
 import analysis.DistributionOverTime;
 import analysis.GraphAnalysis;
 import static analysis.GraphAnalysis.RESOURCES_LOCATION;
+import analysis.LPA;
 import analysis.TemporalAnalysis;
 import index.IndexBuilder;
 import index.IndexSearcher;
@@ -42,6 +43,7 @@ public class Main {
         boolean calculateTopAuthorities = false;
         boolean printAuthorities = false;
         boolean calculateKplayers = true;
+        boolean calculateLPA = true;
         double threshold = 0.07;
 
         String[] prefixYesNo = {"yes", "no"};
@@ -140,6 +142,9 @@ public class Main {
                 // save the first topk authorities
                 TxtUtils.iterableToTxt(RESOURCES_LOCATION + supportType + "_top_k_players.txt", brokersUsername);
             }
+        }
+        if (calculateLPA) {
+            LPA.runLPA();
         }
     }
 }

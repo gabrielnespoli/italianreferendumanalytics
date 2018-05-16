@@ -355,7 +355,7 @@ public class LPA {
         return seeds;
     }
 
-    public static void main(String[] args) throws FileNotFoundException, IOException, org.apache.lucene.queryparser.classic.ParseException, InterruptedException {
+    public static void runLPA() throws FileNotFoundException, IOException, org.apache.lucene.queryparser.classic.ParseException, InterruptedException {
 
         // Create a fake graph for testing
         /*WeightedDirectedGraph g = new WeightedDirectedGraph(ZacharyNetwork.VERTEX);
