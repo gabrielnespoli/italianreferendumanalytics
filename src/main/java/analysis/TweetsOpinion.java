@@ -587,7 +587,7 @@ public class TweetsOpinion {
         findSupporters("src/main/resources/no_politicians.txt", "src/main/resources/no_users_mention_politicians.txt", "src/main/resources/no_map_users_mention_politicians.txt");
          
         // Part 1.3 
-        hubnessGraph13();
+        //hubnessGraph13();
 
     }
 }

@@ -5,6 +5,7 @@ import analysis.GraphAnalysis;
 import static analysis.GraphAnalysis.RESOURCES_LOCATION;
 import analysis.LPA;
 import analysis.TemporalAnalysis;
+import analysis.TweetsOpinion;
 import index.IndexBuilder;
 import index.IndexSearcher;
 import io.ReadFile;
@@ -37,13 +38,14 @@ public class Main {
         boolean clusterTopTerms = false;
         boolean generateCoocurrenceGraph = false;
         boolean extractKCoreCC = false;
+        boolean makeM = false;
         boolean useCache = true;
         boolean plotTS = false;
-        boolean loadGraph = false;
-        boolean calculateTopAuthorities = false;
+        boolean loadGraph = true;
+        boolean calculateTopAuthorities = true;
         boolean printAuthorities = false;
-        boolean calculateKplayers = true;
-        boolean calculateLPA = true;
+        boolean calculateKplayers = false;
+        boolean calculateLPA = false;
         double threshold = 0.07;
 
         String[] prefixYesNo = {"yes", "no"};
@@ -95,6 +97,9 @@ public class Main {
             mapLong2Int = new LongIntDict();
             GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
         }
+        if(makeM){
+            TweetsOpinion.run1();
+        }
 
         if (calculateTopAuthorities) {
             LinkedHashSet<Integer> users = GraphAnalysis.getUsersMentionedPolitician(useCache, mapLong2Int);
@@ -108,6 +113,8 @@ public class Main {
 
             MappedWeightedGraph gmap = GraphAnalysis.extractLargestCCofM(g, usersIDs, mapLong2Int);
             GraphAnalysis.saveTopKAuthorities(gmap, users, mapLong2Int, 1000, useCache);
+            TweetsOpinion.saveTopKAuthoritiesHubness(gmap, users, mapLong2Int, useCache);
+            TweetsOpinion.hubnessGraph13();
         }
 
         if (printAuthorities) {
