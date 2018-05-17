@@ -1,16 +1,22 @@
 package analysis;
 
+import static analysis.GraphAnalysis.RESOURCES_LOCATION;
+import static analysis.GraphAnalysis.runner;
+import gnu.trove.map.TIntLongMap;
 import java.io.File;
 import java.io.IOException;
 import io.TxtUtils;
 import index.IndexBuilder;
 import it.stilo.g.algo.HubnessAuthority;
 import it.stilo.g.structures.DoubleValues;
+import it.stilo.g.structures.LongIntDict;
 import it.stilo.g.structures.WeightedDirectedGraph;
+import it.stilo.g.structures.WeightedGraph;
 import it.stilo.g.util.NodesMapper;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
+import static java.lang.Integer.min;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -41,6 +47,7 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import static org.apache.lucene.util.Version.LUCENE_41;
+import structure.MappedWeightedGraph;
 import twitter4j.JSONException;
 
 public class TweetsOpinion {
@@ -248,7 +255,7 @@ public class TweetsOpinion {
             noScoreW = mapNoWords.getOrDefault(user, 0);
             int finalScoreP = yesScoreP - noScoreP;
             int finalScoreW = yesScoreW - noScoreW;
-            
+
             System.out.println("User: " + user + ", W score: " + finalScoreW);
 
             if (finalScoreP > 0 && finalScoreW > 0) {
@@ -268,7 +275,7 @@ public class TweetsOpinion {
         TxtUtils.iterableToTxt("src/main/resources/no_M.txt", mNo);
     }
 
-    private static void hubnessGraph13() throws IOException {
+    public static void hubnessGraph13() throws IOException {
         // Load the key = <user> <politician>, value = <number of times mentioned>
         Map<String, Integer> mapYesPoliticians = new HashMap<String, Integer>();
         mapYesPoliticians = TxtToMap("src/main/resources/yes_map_users_mention_politicians.txt");
@@ -349,49 +356,48 @@ public class TweetsOpinion {
         for (String user : hubScore.keySet()) {
             double score = -(authScore.get(user) + hubScore.get(user)) / 2.0;
             hubnessAuthority.put(user, score);
-            //System.out.println(user + " " + score);
+            //System.out.println(user + " total score: " + score + "( auth score: " + authScore.get(user) + ", hub score: "+ hubScore.get(user) + ")");
         }
 
         // Sort the users by value of the map
         Map<String, Double> hubnessAuthoritySorted = new HashMap<String, Double>();
         hubnessAuthoritySorted = sortByValue(hubnessAuthority);
-        
+
         // Import the yes and no users
         List<String> usersYes = new ArrayList<>();
         usersYes = TxtUtils.txtToList("src/main/resources/yes_M.txt");
-        
+
         List<String> usersNo = new ArrayList<>();
         usersNo = TxtUtils.txtToList("src/main/resources/no_M.txt");
-        
+
         // Store here the top 500
         List<String> usersYes500 = new ArrayList<>();
         List<String> usersNo500 = new ArrayList<>();
-        
+
         // Iterate over the top of the list, and add the users to the top 500 yes/no supporters
         int counterYes = 0;
         int counterNo = 0;
-        for(String user: hubnessAuthoritySorted.keySet()){
-            //System.out.println(user + " " + hubnessAuthoritySorted.get(user));
-            if(usersYes.contains(user) & counterYes < 500){
+        for (String user : hubnessAuthoritySorted.keySet()) {
+            System.out.println(user + " " + hubnessAuthoritySorted.get(user) + " ( auth score: " + authScore.get(user) + ", hub score: " + hubScore.get(user) + ")");
+            if (usersYes.contains(user) & counterYes < 500) {
                 usersYes500.add(user);
                 counterYes++;
             }
-            if(usersNo.contains(user) & counterNo < 500){
+            if (usersNo.contains(user) & counterNo < 500) {
                 usersNo500.add(user);
                 counterNo++;
             }
-            
+
             // Stop iterating
-            if(counterYes == 500 & counterNo == 500){
+            if (counterYes == 500 & counterNo == 500) {
                 break;
             }
         }
-        
+
         System.out.println(usersYes500.size() + ", " + usersNo500.size());
         TxtUtils.iterableToTxt("src/main/resources/yes_top500_hub_auth.txt", usersYes500);
         TxtUtils.iterableToTxt("src/main/resources/no_top500_hub_auth.txt", usersNo500);
-        
-        
+
     }
 
     // source stackoverflow
@@ -412,15 +418,131 @@ public class TweetsOpinion {
 
         return result;
     }
+
+    public static void saveTopKAuthoritiesHubness(MappedWeightedGraph gmap, LinkedHashSet<Integer> users, LongIntDict mapLong2Int, boolean useCache) throws InterruptedException, IOException, ParseException {
+        WeightedGraph g = gmap.getWeightedGraph();
+        TIntLongMap mapInt2Long = mapLong2Int.getInverted();
+
+        // get the authorities
+        ArrayList<ArrayList<DoubleValues>> authorities = HubnessAuthority.compute(g, 0.00001, runner);
+        ArrayList<DoubleValues> auth = authorities.get(0);
+        ArrayList<DoubleValues> hub = authorities.get(1);
+
+        // map back the ids in 'score' to the previous id, before the resizing, then map back to the twitter ID
+        ArrayList<DoubleValues> authMappedID = new ArrayList<>();
+        ArrayList<DoubleValues> hubMappedID = new ArrayList<>();
+
+        Map<Long, Double> mapLongAuth = new HashMap<Long, Double>();
+        Map<Long, Double> mapLongHub = new HashMap<Long, Double>();
+        for (DoubleValues score : auth) {
+            mapLongAuth.put(mapInt2Long.get(score.index), score.value);
+            //authMappedID.add(new DoubleValues((int) mapInt2Long.get(score.index), score.value));
+        }
+        for (DoubleValues score : hub) {
+            mapLongHub.put(mapInt2Long.get(score.index), score.value);
+            //hubMappedID.add(new DoubleValues((int) mapInt2Long.get(score.index), score.value));
+        }
+
+        // get the users that mention the politicians more that 5 times
+        List<String> yesUserMentionPolitician = TxtUtils.txtToList(RESOURCES_LOCATION + "yes_map_users_politicians.txt");
+        Map<Long, Integer> userIdCountYesPol = new HashMap<Long, Integer>();
+        for (String row : yesUserMentionPolitician) {
+            String username = row.split("=")[0];  // get the user screen name
+            Document[] docs = index.IndexSearcher.searchByField("all_tweets_index/", "user", username, 1);
+
+            if (docs != null) {
+                Long id = Long.parseLong(docs[0].get("id"));  //read just the first resulting doc
+                int ths = Integer.parseInt(row.split("=")[1]);
+                if (ths > 4) {
+                    userIdCountYesPol.put(id, ths);  // retrieve the twitter ID (long) and covert to int
+
+                }
+            }
+        }
+        //  same thing for no users
+        List<String> noUserMentionPolitician = TxtUtils.txtToList(RESOURCES_LOCATION + "no_map_users_politicians.txt");
+        Map<Long, Integer> userIdCountNoPol = new HashMap<Long, Integer>();
+        for (String row : noUserMentionPolitician) {
+            String username = row.split("=")[0];  // get the user screen name
+            Document[] docs = index.IndexSearcher.searchByField("all_tweets_index/", "user", username, 1);
+
+            if (docs != null) {
+                Long id = Long.parseLong(docs[0].get("id"));  //read just the first resulting doc
+                int ths = Integer.parseInt(row.split("=")[1]);
+                if (ths > 4) {
+                    userIdCountNoPol.put(id, ths);  // retrieve the twitter ID (long) and covert to int
+
+                }
+            }
+        }
+        
+        // now split them using the M files
+        List<String> yesUsers = TxtUtils.txtToList(RESOURCES_LOCATION + "yes_M_IDs.txt");
+        List<String> noUsers = TxtUtils.txtToList(RESOURCES_LOCATION + "no_M_IDs.txt");
+        List<Long> noUsersFinal = new ArrayList<>();
+        List<Long> yesUsersFinal = new ArrayList<>();
+        
+        for (String u : yesUsers){
+            Long ul = Long.parseLong(u);
+            if (userIdCountNoPol.containsKey(ul) || userIdCountYesPol.containsKey(ul)){
+                yesUsersFinal.add(ul);
+            }
+        }
+        
+        for (String u : noUsers){
+            Long ul = Long.parseLong(u);
+            if (userIdCountNoPol.containsKey(ul) || userIdCountYesPol.containsKey(ul)){
+                noUsersFinal.add(ul);
+            }
+        }
+        
+        
+        
+
+        System.out.println("Calculating final score");
+        Map<Long, Double> hubnessAuthority = new HashMap<Long, Double>();
+        for (Long user : mapLongHub.keySet()) {
+            double sc = -(mapLongHub.get(user) + mapLongAuth.get(user)) / 2.0;
+            if (userIdCountNoPol.containsKey(user) || userIdCountYesPol.containsKey(user)) {
+                hubnessAuthority.put(user, sc);
+            }
+        }
+
+
+        Map<Long, Double> hubnessAuthoritySorted = new HashMap<Long, Double>();
+        hubnessAuthoritySorted = sortByValue(hubnessAuthority);
+        
+        // Now get the top users for each set
+        int counterYes = 0;
+        int counterNo = 0;
+        ArrayList<Long> ahYes = new ArrayList<Long>();
+        ArrayList<Long> ahNo = new ArrayList<Long>();
+        for (Long user: hubnessAuthoritySorted.keySet()){
+            if(yesUsersFinal.contains(user) && counterYes < 500){
+                ahYes.add(user);
+                counterYes++;
+            }
+            if(noUsersFinal.contains(user) && counterNo < 500){
+                ahNo.add(user);
+                counterNo++;
+            }
+        }
+        
+        
+        // save the first topk authorities
+        TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_hubness_authorities_yes.txt", ahYes);
+        TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_hubness_authorities_no.txt", ahNo);
+    }
+
     private static final Logger logger = LogManager.getLogger(TweetsOpinion.class);
 
-    public static void main(String[] args) throws IOException, JSONException, ParseException, java.text.ParseException {
+    public static void run1() throws IOException, JSONException, ParseException, java.text.ParseException {
         // Uncomment to create the inverted index of all tweets
         //createIndexAllTweets();
 
         // Part 1.1
         // Find the number of times the users mention the politicians or the words of the clusters, this has to be ran only once
-        /*uncomment
+
         Map<String, Integer> mapYesPoliticians = new HashMap<String, Integer>();
         Map<String, Integer> mapYesWords = new HashMap<String, Integer>();
         
@@ -463,11 +585,9 @@ public class TweetsOpinion {
 
         //System.out.println("#### NO");
         findSupporters("src/main/resources/no_politicians.txt", "src/main/resources/no_users_mention_politicians.txt", "src/main/resources/no_map_users_mention_politicians.txt");
-         */
+         
         // Part 1.3 
-        //hubnessGraph13();
-        
-        // Alternative for part 1.3
+        hubnessGraph13();
 
     }
 }
