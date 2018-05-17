@@ -34,18 +34,18 @@ public class Main {
 
     public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
         boolean plotDistrTweets = false;
-        boolean createIndex = false;
-        boolean clusterTopTerms = false;
-        boolean generateCoocurrenceGraph = false;
-        boolean extractKCoreCC = false;
-        boolean makeM = false;
-        boolean useCache = true;
+        boolean createIndex = true;
+        boolean clusterTopTerms = true;
+        boolean generateCoocurrenceGraph = true;
+        boolean extractKCoreCC = true;
+        boolean makeM = true;
+        boolean useCache = false;
         boolean plotTS = false;
         boolean loadGraph = true;
         boolean calculateTopAuthorities = true;
-        boolean printAuthorities = false;
-        boolean calculateKplayers = false;
-        boolean calculateLPA = false;
+        boolean printAuthorities = true;
+        boolean calculateKplayers = true;
+        boolean calculateLPA = true;
         double threshold = 0.07;
 
         String[] prefixYesNo = {"yes", "no"};
