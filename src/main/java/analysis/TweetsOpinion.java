@@ -28,15 +28,12 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import java.util.Map.Entry;
 import java.util.Set;
 import org.apache.lucene.analysis.it.ItalianAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
@@ -102,8 +99,8 @@ public class TweetsOpinion {
             TopDocs top = searcher.search(q, 10000000);
             ScoreDoc[] hits = top.scoreDocs;
 
-            Document doc = null;
-            String s = "";
+            Document doc;
+            String s;
 
             // go on each hit
             for (ScoreDoc entry : hits) {
@@ -115,7 +112,7 @@ public class TweetsOpinion {
             }
         }
         // Save to file as <user> <polititian>
-        Map<String, Integer> map = new HashMap<String, Integer>();
+        Map<String, Integer> map = new HashMap<>();
         for (String row : saveHits) {
             counter = showProgress(counter, saveHits.size());
             // add the user to the counter and add one to the counter
@@ -154,7 +151,7 @@ public class TweetsOpinion {
         if ("words".equals(mode)) {
             List<String> words = TxtUtils.txtToList(filepath);
 
-            Set<String> wordsClean = new HashSet<String>();
+            Set<String> wordsClean = new HashSet<>();
 
             for (String w : words) {
                 wordsClean.add(w.split(" ")[0]);
@@ -170,7 +167,6 @@ public class TweetsOpinion {
         //System.out.println(queryTxtWords);
         // Load the all tweets index and analyzer
         ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, IndexBuilder.STOPWORDS);
-        IndexWriterConfig cfg = new IndexWriterConfig(Version.LUCENE_41, analyzer);
 
         File directoryIndex = new File(IndexBuilder.INDEX_DIRECTORY + "all_tweets_index/");
         IndexReader ir = DirectoryReader.open(FSDirectory.open(directoryIndex));
@@ -185,9 +181,9 @@ public class TweetsOpinion {
 
         // i create a dict where the keys are the usernames and the values the number of times the
         // user apears in a document result as the writer
-        Map<String, Integer> map = new HashMap<String, Integer>();
-        String user = "";
-        Document doc = null;
+        Map<String, Integer> map = new HashMap<>();
+        String user;
+        Document doc;
         // Go to each doc
         int counter = 0;
         for (ScoreDoc entry : hits) {
@@ -218,10 +214,10 @@ public class TweetsOpinion {
         int counter = 0;
         for (String user : allUsers) {
             counter = showProgress(counter, allUsers.size());
-            int yesScoreP = 0;
-            int noScoreP = 0;
-            int yesScoreW = 0;
-            int noScoreW = 0;
+            int yesScoreP;
+            int noScoreP;
+            int yesScoreW;
+            int noScoreW;
             yesScoreP = mapYesPoliticians.getOrDefault(user, 0);
             noScoreP = mapNoPoliticians.getOrDefault(user, 0);
             yesScoreW = mapYesWords.getOrDefault(user, 0);
@@ -261,7 +257,7 @@ public class TweetsOpinion {
         List<Integer> weights = new ArrayList<>();
 
         // Create the mapper to get back the usernames
-        NodesMapper<String> mapper = new NodesMapper<String>();
+        NodesMapper<String> mapper = new NodesMapper<>();
 
         // Go on each <user> <politician> and get the weight and put all in the list
         for (String userPol : mapYesPoliticians.keySet()) {
@@ -282,8 +278,8 @@ public class TweetsOpinion {
 
         // Convert lists to arrays to use Stilo library
         int[] usersArray = users.stream().mapToInt(i -> i).toArray();
-        int[] politiciansArray = users.stream().mapToInt(i -> i).toArray();
-        int[] weightsArray = users.stream().mapToInt(i -> i).toArray();
+        int[] politiciansArray = politicians.stream().mapToInt(i -> i).toArray();
+        int[] weightsArray = weights.stream().mapToInt(i -> i).toArray();
 
         // Create the graph
         WeightedDirectedGraph g = new WeightedDirectedGraph(usersArray.length + 1);
@@ -301,8 +297,8 @@ public class TweetsOpinion {
         list = HubnessAuthority.compute(g, 0.00001, worker);
 
         // Store in dicts the hubness and authority scores
-        Map<String, Double> authScore = new HashMap<String, Double>();
-        Map<String, Double> hubScore = new HashMap<String, Double>();
+        Map<String, Double> authScore = new HashMap<>();
+        Map<String, Double> hubScore = new HashMap<>();
 
         for (int i = 0; i < list.size(); i++) {
             ArrayList<DoubleValues> score = list.get(i);
@@ -310,13 +306,11 @@ public class TweetsOpinion {
             if (i == 0) {
                 x = "Auth ";
                 for (int j = 0; j < score.size(); j++) {
-                    //logger.trace(x + score.get(j).value + ":\t\t" + mapper.getNode(score.get(j).index + 1));
                     authScore.put(mapper.getNode(score.get(j).index + 1), score.get(j).value);
                 }
             } else {
                 x = "Hub ";
                 for (int j = 0; j < score.size(); j++) {
-                    //logger.trace(x + score.get(j).value + ":\t\t" + mapper.getNode(score.get(j).index + 1));
                     hubScore.put(mapper.getNode(score.get(j).index + 1), score.get(j).value);
                 }
             }
@@ -337,10 +331,10 @@ public class TweetsOpinion {
         hubnessAuthoritySorted = sortByValue(hubnessAuthority);
 
         // Import the yes and no users
-        List<String> usersYes = new ArrayList<>();
+        List<String> usersYes;
         usersYes = TxtUtils.txtToList("src/main/resources/yes_M.txt");
 
-        List<String> usersNo = new ArrayList<>();
+        List<String> usersNo;
         usersNo = TxtUtils.txtToList("src/main/resources/no_M.txt");
 
         // Store here the top 500
@@ -401,8 +395,8 @@ public class TweetsOpinion {
         ArrayList<DoubleValues> auth = authorities.get(0);
         ArrayList<DoubleValues> hub = authorities.get(1);
 
-        Map<Long, Double> mapLongAuth = new HashMap<Long, Double>();
-        Map<Long, Double> mapLongHub = new HashMap<Long, Double>();
+        Map<Long, Double> mapLongAuth = new HashMap<>();
+        Map<Long, Double> mapLongHub = new HashMap<>();
         for (DoubleValues score : auth) {
             mapLongAuth.put(mapInt2Long.get(score.index), score.value);   // map back the ids in 'score' to the previous id, before the resizing, then map back to the twitter ID
         }
@@ -412,7 +406,7 @@ public class TweetsOpinion {
 
         // get the users that mention the politicians >= than minNumberComments times
         List<String> yesUserMentionPolitician = TxtUtils.txtToList(RESOURCES_LOCATION + "yes_map_users_politicians.txt");
-        Map<Long, Integer> userIdCountYesPol = new HashMap<Long, Integer>();
+        Map<Long, Integer> userIdCountYesPol = new HashMap<>();
         for (String row : yesUserMentionPolitician) {
             String username = row.split("=")[0];  // get the user screen name
             Document[] docs = index.IndexSearcher.searchByField("all_tweets_index/", "user", username, 1);
@@ -428,7 +422,7 @@ public class TweetsOpinion {
         }
         //  same thing for no users
         List<String> noUserMentionPolitician = TxtUtils.txtToList(RESOURCES_LOCATION + "no_map_users_politicians.txt");
-        Map<Long, Integer> userIdCountNoPol = new HashMap<Long, Integer>();
+        Map<Long, Integer> userIdCountNoPol = new HashMap<>();
         for (String row : noUserMentionPolitician) {
             String username = row.split("=")[0];  // get the user screen name
             Document[] docs = index.IndexSearcher.searchByField("all_tweets_index/", "user", username, 1);
@@ -464,7 +458,7 @@ public class TweetsOpinion {
         }
 
         System.out.println("Calculating final score");
-        Map<Long, Double> hubnessAuthority = new HashMap<Long, Double>();
+        Map<Long, Double> hubnessAuthority = new HashMap<>();
         for (Long user : mapLongHub.keySet()) {
             double sc = -(mapLongHub.get(user) + mapLongAuth.get(user)) / 2.0;
             if (userIdCountNoPol.containsKey(user) || userIdCountYesPol.containsKey(user)) {
@@ -472,14 +466,14 @@ public class TweetsOpinion {
             }
         }
 
-        Map<Long, Double> hubnessAuthoritySorted = new HashMap<Long, Double>();
+        Map<Long, Double> hubnessAuthoritySorted = new HashMap<>();
         hubnessAuthoritySorted = sortByValue(hubnessAuthority);
 
         // Now get the top users for each set
         int counterYes = 0;
         int counterNo = 0;
-        ArrayList<Long> ahYes = new ArrayList<Long>();
-        ArrayList<Long> ahNo = new ArrayList<Long>();
+        ArrayList<Long> ahYes = new ArrayList<>();
+        ArrayList<Long> ahNo = new ArrayList<>();
         for (Long user : hubnessAuthoritySorted.keySet()) {
             if (yesUsersFinal.contains(user) && counterYes < 500) {
                 ahYes.add(user);
@@ -495,8 +489,6 @@ public class TweetsOpinion {
         TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_hubness_authorities_yes.txt", ahYes);
         TxtUtils.iterableToTxt(RESOURCES_LOCATION + "top_hubness_authorities_no.txt", ahNo);
     }
-
-    private static final Logger logger = LogManager.getLogger(TweetsOpinion.class);
 
     public static void buildMGroup(boolean useCache) throws IOException, JSONException, ParseException, java.text.ParseException {
         // Uncomment to create the inverted index of all tweets
