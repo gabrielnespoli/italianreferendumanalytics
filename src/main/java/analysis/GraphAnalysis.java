@@ -339,7 +339,7 @@ public abstract class GraphAnalysis {
         } else {
             try {
                 hmGroupType2Users.put("no", new LinkedHashSet(txtToList(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", Integer.class)));
-                hmGroupType2Users.put("yes", new LinkedHashSet(txtToList(RESOURCES_LOCATION + "no_unique_users_mention_politician.txt", Integer.class)));
+                hmGroupType2Users.put("yes", new LinkedHashSet(txtToList(RESOURCES_LOCATION + "yes_unique_users_mention_politician.txt", Integer.class)));
             } catch (Exception ex) {
                 throw new ReadTxtException();
             }

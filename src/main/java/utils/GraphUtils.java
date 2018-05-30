@@ -16,7 +16,7 @@ public abstract class GraphUtils {
     public static String SEP = "\t";
 
     // we were having problems with memory insufficiency. We had to resize the graph through a mapping
-    // and now we have to save using the TwitterID (another mappin)
+    // and now we have to save using the TwitterID (another mapping)
     public static void saveDirectGraph2Mappings(WeightedGraph g, String outputGraph, TIntLongMap int2LongResizeMap, TIntLongMap int2LongTwitterMap) throws IOException {
         BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(outputGraph))));
 

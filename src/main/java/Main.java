@@ -34,18 +34,18 @@ public class Main {
 
     public static void main(String[] args) throws IOException, JSONException, ParseException, Exception {
         boolean plotDistrTweets = false;
-        boolean createIndex = true;
-        boolean clusterTopTerms = true;
-        boolean generateCoocurrenceGraph = true;
-        boolean extractKCoreCC = true;
-        boolean makeM = true;
-        boolean useCache = false;
+        boolean createIndex = false;
+        boolean clusterTopTerms = false;
+        boolean generateCoocurrenceGraph = false;
+        boolean extractKCoreCC = false;
+        boolean makeM = false;
+        boolean useCache = true;
         boolean plotTS = false;
         boolean loadGraph = true;
         boolean calculateTopAuthorities = true;
-        boolean printAuthorities = true;
-        boolean calculateKplayers = true;
-        boolean calculateLPA = true;
+        boolean printAuthorities = false;
+        boolean calculateKplayers = false;
+        boolean calculateLPA = false;
         double threshold = 0.07;
 
         String[] prefixYesNo = {"yes", "no"};
@@ -86,6 +86,10 @@ public class Main {
             TemporalAnalysis.compareTimeSeriesOfTerms(3, prefixYesNo, clusterTypes);
         }
 
+        if(makeM){
+            TweetsOpinion.buildMGroup(useCache);
+        }
+        
         WeightedDirectedGraph g = null;
         LongIntDict mapLong2Int = null;
         int graphSize = 0;
@@ -97,10 +101,7 @@ public class Main {
             mapLong2Int = new LongIntDict();
             GraphReader.readGraphLong2IntRemap(g, RESOURCES_LOCATION + graphFilename, mapLong2Int, false);
         }
-        if(makeM){
-            TweetsOpinion.run1();
-        }
-
+        
         if (calculateTopAuthorities) {
             LinkedHashSet<Integer> users = GraphAnalysis.getUsersMentionedPolitician(useCache, mapLong2Int);
             // convert the set to array of int, needed by the method "SubGraph.extract"
@@ -113,7 +114,7 @@ public class Main {
 
             MappedWeightedGraph gmap = GraphAnalysis.extractLargestCCofM(g, usersIDs, mapLong2Int);
             GraphAnalysis.saveTopKAuthorities(gmap, users, mapLong2Int, 1000, useCache);
-            TweetsOpinion.saveTopKAuthoritiesHubness(gmap, users, mapLong2Int, useCache);
+            TweetsOpinion.saveTop500HubnessAuthorities(gmap, users, mapLong2Int, 3);
             TweetsOpinion.hubnessGraph13();
         }
 

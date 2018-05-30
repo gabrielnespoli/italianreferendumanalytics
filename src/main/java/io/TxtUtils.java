@@ -6,9 +6,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 public abstract class TxtUtils {
 
@@ -87,4 +89,28 @@ public abstract class TxtUtils {
         }
         writer.close();
     }
+
+    public static void mapToTxt(String filePath, Map<String, Integer> map) throws IOException {
+        FileWriter writer = new FileWriter(filePath);
+        Iterator<Map.Entry<String, Integer>> iterator = map.entrySet().iterator();
+        Object obj;
+        while (iterator.hasNext()) {
+            obj = iterator.next();
+            writer.write(obj.toString());
+            writer.write("\n");
+        }
+        writer.close();
+    }
+
+    public static Map<String, Integer> TxtToMap(String filePath) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(filePath));
+        Map<String, Integer> data = new HashMap<String, Integer>();
+        String s;
+        while ((s = br.readLine()) != null) {
+            data.put(s.split("=")[0], Integer.parseInt(s.split("=")[1]));
+        }
+        br.close();
+        return data;
+    }
+
 }

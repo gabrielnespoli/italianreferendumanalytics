@@ -41,7 +41,7 @@ public abstract class TemporalAnalysis {
     public static final File[] SUB_DIRECTORIES_TEST = new File(STREAM_FILES_LOCATION_TEST).listFiles((File file) -> file.isDirectory());
 
     public static final String RESOURCES_DIRECTORY = "src/main/resources/";
-    
+
     private static long[] getMinMaxDates() throws IOException {
         File indexFile = new File(IndexBuilder.INDEX_DIRECTORY + "yes_index");
         FSDirectory indexFSDirectory = FSDirectory.open(indexFile);
@@ -338,21 +338,21 @@ public abstract class TemporalAnalysis {
         long interval = c.getTime().getTime() - min;
 
         for (String prefix : prefixYesNo) {
-            
-            System.out.println("Creating the time series of the '" + prefix + "' group of supporters"); 
-            
+
+            System.out.println("Creating the time series of the '" + prefix + "' group of supporters");
+
             indexDirectory = INDEX_DIRECTORY + prefix + "_index";
             for (String clusterType : clusterTypes) {
                 clusterDirectory = RESOURCES_DIRECTORY + prefix + "_" + clusterType + ".txt";
                 clusters = GraphAnalysis.loadClusters(clusterDirectory);
 
                 System.out.println("Creating the time series of cluster type " + clusterType);
-                
+
                 // iterate through all the clusters plotting the time series of all terms in the cluster
                 for (Integer clusterID : clusters.keySet()) {
-                    
+
                     System.out.println("Creating the time series of cluster " + clusterID + " of " + (clusters.keySet().size() - 1));
-                    
+
                     terms = new ArrayList<>(clusters.get(clusterID));
                     HashMap<String, double[]> hmTermsTS = createTermsTimeSeries(indexDirectory, terms, max, min, interval);
 
@@ -361,6 +361,22 @@ public abstract class TemporalAnalysis {
                     ArrayList<String> labels = dataToPlot.getLeft();
                     ArrayList<double[]> xvaluesList = dataToPlot.getMiddle();
                     ArrayList<double[]> yvaluesList = dataToPlot.getRight();
+
+                    double maxFreq = -1;
+                    for (double[] termFreqs : yvaluesList) {
+                        for (int i = 0; i < termFreqs.length; i++) {
+                            if (termFreqs[i] > maxFreq) {
+                                maxFreq = termFreqs[i];
+                            }
+                        }
+                    }
+
+                    for (double[] termFreqs : yvaluesList) {
+                        for (int i = 0; i < termFreqs.length; i++) {
+                            termFreqs[i] = termFreqs[i] / maxFreq;
+                        }
+                    }
+
                     graphTitle = "Evolution of terms frequency on time (parameters: " + prefix + ", " + clusterType + ")";
                     Plotter tsPlotter = new Plotter(graphTitle, labels, xvaluesList, yvaluesList);
                     tsPlotter.savePlot(RESOURCES_DIRECTORY + "/images/" + prefix + "_" + clusterType + "_" + clusterID + ".PNG");
